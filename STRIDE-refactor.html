@@ -1,0 +1,4234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STRIDE Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --blue: #0038a8;
+      --blue-soft: #eaf1ff;
+      --violet: #6d28d9;
+      --violet-soft: #f3e8ff;
+      --green: #16a34a;
+      --green-soft: #eafaf0;
+      --amber: #d97706;
+      --amber-soft: #fff7e6;
+      --red: #ce1126;
+      --red-soft: #fff0f2;
+      --cyan: #0891b2;
+      --cyan-soft: #ecfeff;
+      --shadow: 0 14px 40px rgba(15, 23, 42, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .dashboard {
+      width: min(1600px, 100vw);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto auto minmax(calc(100vh - 142px), auto) auto;
+      gap: 10px;
+      overflow-y: visible;
+    }
+
+    .back-filter {
+      height: 38px;
+      width: auto;
+      padding: 0 14px;
+      border-radius: 14px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      box-shadow: 0 10px 24px rgba(0, 56, 168, 0.18);
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+
+    .back-filter:disabled {
+      opacity: 0.42;
+      cursor: default;
+      background: #e2e8f0;
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    .fs-btn {
+      height: 26px;
+      width: 26px;
+      padding: 0;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 300px;
+      max-width: 86vw;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px;
+      background: var(--card);
+      border-left: 1px solid var(--line);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+      transform: translateX(110%);
+      transition: transform 220ms ease;
+      overflow-y: auto;
+    }
+
+    .sidebar.open { transform: translateX(0); }
+
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 65;
+      background: rgba(15, 23, 42, 0.32);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+    }
+
+    .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+
+    .sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .sidebar-head h2 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+    }
+
+    .sidebar-close {
+      height: 32px;
+      width: 32px;
+      padding: 0;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: var(--muted);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 9px 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 950;
+      background: linear-gradient(135deg, var(--blue), #0057d8);
+      box-shadow: 0 12px 24px rgba(0, 56, 168, 0.24);
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(14px, 1.5vw, 19px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .timestamp {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.12);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: auto minmax(140px, 1fr) minmax(140px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(190px, auto) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 10px 12px;
+    }
+
+    .filters-bar {
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    label { display: grid; gap: 5px; }
+
+    label span {
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 950;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    select,
+    button {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 850;
+      padding: 0 12px;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-color: #cfe0ff;
+      white-space: nowrap;
+    }
+
+    .filter-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .filter-chip strong { color: var(--blue); }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .kpi {
+      position: relative;
+      overflow: visible;
+      padding: 6px 8px;
+      min-width: 0;
+    }
+
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kpi-label {
+      color: var(--muted);
+      font-size: 7px;
+      font-weight: 950;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      padding: 4px 7px;
+      border-radius: 999px;
+      font-size: 7px;
+      font-weight: 950;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .healthy { background: var(--green-soft); color: var(--green); border-color: #bbf7d0; }
+    .watch { background: var(--amber-soft); color: var(--amber); border-color: #fde68a; }
+    .risk { background: var(--red-soft); color: var(--red); border-color: #fecdd3; }
+    .violet { background: var(--violet-soft); color: var(--violet); border-color: #ddd6fe; }
+    .cyan { background: var(--cyan-soft); color: var(--cyan); border-color: #bae6fd; }
+
+    .kpi-value {
+      margin: 3px 0 2px;
+      font-size: clamp(12px, 1.3vw, 18px);
+      font-weight: 950;
+      letter-spacing: -0.06em;
+    }
+
+    .kpi-note {
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .kpi-total {
+      background: linear-gradient(135deg, var(--violet), #8b5cf6);
+      border: none;
+      color: white;
+      box-shadow: 0 16px 38px rgba(109, 40, 217, 0.28);
+    }
+
+    .kpi-total .kpi-label { color: rgba(255, 255, 255, 0.82); }
+    .kpi-total .kpi-value { color: white; }
+    .kpi-total .kpi-note { color: rgba(255, 255, 255, 0.85); }
+
+    .badge-total {
+      background: rgba(255, 255, 255, 0.18);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    .kpi-accent {
+      height: 3px;
+      border-radius: 999px;
+      margin: 0 0 4px;
+    }
+
+    .hover-card {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: calc(100% - 6px);
+      z-index: 40;
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .kpi:hover .hover-card {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .hover-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 8px;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .hover-row strong {
+      color: var(--ink);
+      font-size: 11px;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: 1.3fr 1fr;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .chart-card {
+      padding: 12px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .chart-card.is-donut {
+      min-height: 0;
+    }
+
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+    .span-2 { grid-column: span 2; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+    .tall { grid-row: span 2; }
+
+    .placeholder-card {
+      display: grid;
+      grid-template-rows: 1fr;
+      place-items: center;
+      border-style: dashed;
+      border-width: 2px;
+      background: #fbfdff;
+    }
+
+    .placeholder-inner {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: -0.03em;
+    }
+
+    .card-header p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 650;
+    }
+
+    .card-controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 9px;
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+    }
+
+    .card-controls select {
+      width: 100%;
+    }
+
+    .chart-stage {
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      gap: 6px;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .chart-stage > * {
+      min-height: 0;
+    }
+
+    .chart-card.is-donut .chart-stage {
+      min-height: 0;
+      overflow: visible;
+    }
+
+    .chart-card[data-card="card-a"] .chart-stage {
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 6px;
+    }
+
+    .chart-card[data-card="card-a"] {
+      align-self: start;
+      height: auto;
+      min-height: 0;
+    }
+
+    .chart-card[data-card="card-a"] .bars {
+      min-height: 0;
+      height: auto;
+      align-content: start;
+      gap: var(--bar-gap, 2px);
+    }
+
+    .chart-card[data-card="card-a"] .bar-row {
+      grid-template-columns: minmax(var(--bar-label-width, 110px), 1fr) minmax(0, 3fr) minmax(var(--bar-value-width, 58px), auto);
+    }
+
+    .chart-card[data-card="card-a"] .legend-item {
+      font-size: 12px;
+      padding: 5px 9px;
+    }
+
+    .chart-card[data-card="card-a"] .legend-swatch {
+      width: 12px;
+      height: 12px;
+    }
+
+    .chart-card[data-card="card-a"] .chart-legend {
+      flex: 0 0 auto;
+    }
+
+    .bars {
+      display: grid;
+      align-content: start;
+      gap: var(--bar-gap, 1px);
+      height: 100%;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 44px 1fr 26px;
+      align-items: center;
+      gap: 3px;
+      min-height: 0;
+      height: 100%;
+      font-size: var(--bar-font, 6px);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .bar-row:hover .bar-track,
+    .list-row:hover,
+    .heat-cell:hover {
+      outline: 2px solid rgba(0, 56, 168, 0.18);
+      outline-offset: 2px;
+    }
+
+    .bar-label {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar-track {
+      height: var(--bar-height, 10px);
+      border-radius: 4px;
+      background: #eef2f7;
+      overflow: hidden;
+      display: flex;
+      transition: transform 160ms ease;
+    }
+
+    .bar-stack {
+      height: 100%;
+      display: flex;
+      border-radius: 4px;
+      overflow: hidden;
+      min-width: 40px;
+    }
+
+    .bar-segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      padding: 0 2px;
+      color: #ffffff;
+      font-size: var(--bar-segment-font, 6px);
+      font-weight: 950;
+      line-height: 1;
+      text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+      white-space: nowrap;
+    }
+
+    .bar-row:hover .bar-track { transform: scaleX(1.01); }
+
+    .bar-green { background: var(--green); }
+    .bar-amber { background: var(--amber); }
+    .bar-red { background: var(--red); }
+    .bar-blue { background: var(--blue); }
+    .bar-violet { background: var(--violet); }
+    .bar-cyan { background: var(--cyan); }
+
+    .donut-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .donut-area {
+      position: relative;
+      width: min(460px, 100%);
+      min-height: 0;
+      height: 100%;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .pie-callout {
+      display: none;
+    }
+
+    .pie-labels {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .pie-label {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 124px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 9px;
+      font-weight: 950;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+      white-space: nowrap;
+    }
+
+    .pie-label::after {
+      content: "";
+      position: absolute;
+      height: 2px;
+      background: currentColor;
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .pie-label:nth-child(1) { left: calc(50% + 74px); top: 65px; }
+    .pie-label:nth-child(1)::after { left: -20px; top: 50%; width: 20px; }
+    .pie-label:nth-child(2) { right: calc(50% + 74px); bottom: 24px; }
+    .pie-label:nth-child(2)::after { right: -20px; top: 50%; width: 20px; }
+    .pie-label:nth-child(3) { right: calc(50% + 74px); top: 24px; }
+    .pie-label:nth-child(3)::after { right: -20px; top: 50%; width: 20px; }
+
+    .pie-swatch {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .pie-label strong {
+      color: var(--blue);
+      margin-left: 2px;
+    }
+
+    .pie-pct {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 950;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .donut {
+      width: 124px;
+      height: 124px;
+      border-radius: 50%;
+      background: conic-gradient(var(--violet) 0 52%, var(--blue) 52% 83%, var(--cyan) 83% 100%);
+      display: grid;
+      place-items: center;
+      margin: auto;
+      cursor: pointer;
+      transition: transform 160ms ease;
+    }
+
+    .donut:hover { transform: scale(1.03); }
+
+    .donut.teacher { background: conic-gradient(var(--green) 0 78%, var(--amber) 78% 92%, var(--red) 92% 100%); }
+    .donut.room { background: conic-gradient(var(--green) 0 66%, var(--amber) 66% 82%, var(--red) 82% 100%); }
+    .donut.risk { background: conic-gradient(var(--red) 0 18%, var(--amber) 18% 34%, var(--green) 34% 100%); }
+
+    .donut::after {
+      content: attr(data-center);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: white;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 950;
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .list-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 9px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .mini-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .chart-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      flex-wrap: wrap;
+      margin-top: 3px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 6px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .legend-swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .legend-item strong {
+      color: var(--ink);
+      font-weight: 950;
+    }
+
+    .legend-pct {
+      margin-left: 2px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: white;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 7px;
+      font-weight: 950;
+    }
+
+    .pie-chip {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 7px;
+      font-weight: 900;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .pie-chip strong { color: var(--ink); font-weight: 950; }
+    .pie-chip .legend-pct { margin-left: 0; }
+
+    .chart-table,
+    .mini-table {
+      width: 100%;
+      align-self: end;
+      font-size: 7px;
+      font-weight: 900;
+    }
+
+    .chart-table {
+      border-collapse: separate;
+      border-spacing: 0 4px;
+    }
+
+    .mini-table {
+      display: grid;
+      gap: 4px;
+    }
+
+    .mini-table-head,
+    .mini-table-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mini-table-head {
+      color: var(--muted);
+      font-size: 6px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0 6px 1px;
+    }
+
+    .mini-table-row {
+      padding: 4px 6px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f8fafc;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .mini-table-row strong {
+      font-weight: 950;
+    }
+
+    .chart-table th {
+      color: var(--muted);
+      font-size: 6px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 0 6px 1px;
+    }
+
+    .chart-table th:last-child,
+    .chart-table td:last-child {
+      text-align: right;
+    }
+
+    .chart-table td {
+      padding: 4px 6px;
+      background: #f8fafc;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .chart-table td:first-child {
+      border-left: 1px solid var(--line);
+      border-radius: 9px 0 0 9px;
+      color: var(--muted);
+    }
+
+    .chart-table td:last-child {
+      border-right: 1px solid var(--line);
+      border-radius: 0 9px 9px 0;
+      font-weight: 950;
+    }
+
+    .table-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .chart-combo {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 6px;
+      height: 100%;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .columns {
+      height: 150px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      align-items: end;
+      gap: 10px;
+      padding-top: 8px;
+    }
+
+    .column-wrap {
+      display: grid;
+      gap: 4px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 7px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .column {
+      border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, var(--green), #86efac);
+      min-height: 20px;
+      transition: transform 160ms ease;
+    }
+
+    .column-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 14px;
+      padding: 1px 4px;
+      border-radius: 999px;
+      background: white;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 7px;
+      font-weight: 950;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+    }
+
+    .column-wrap:hover .column { transform: scaleY(1.04); }
+
+    .line-chart {
+      width: 100%;
+      height: 185px;
+      cursor: pointer;
+    }
+
+    .line-label {
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+      fill: var(--ink);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: 80px repeat(4, 1fr);
+      gap: 5px;
+      align-content: start;
+      font-size: 7px;
+      font-weight: 900;
+    }
+
+    .heatmap-wide {
+      grid-template-columns: minmax(118px, 0.9fr) repeat(var(--heat-cols), minmax(70px, 1fr));
+      align-content: start;
+    }
+
+    .heat-head,
+    .heat-label,
+    .heat-cell {
+      padding: 6px 5px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .heat-head {
+      color: var(--muted);
+      background: #f8fafc;
+    }
+
+    .heat-label {
+      color: var(--muted);
+      text-align: left;
+      background: #f8fafc;
+    }
+
+    .heat-cell {
+      cursor: pointer;
+      transition: transform 160ms ease;
+    }
+
+    .heat-cell:hover { transform: translateY(-1px); }
+    .heat-cell.good { background: var(--green-soft); color: var(--green); }
+    .heat-cell.warn { background: var(--amber-soft); color: var(--amber); }
+    .heat-cell.risk { background: var(--red-soft); color: var(--red); }
+    .heat-cell.flat { background: #f1f5f9; color: var(--ink); }
+
+    .heat-scroll { overflow: auto; max-height: 100%; padding-bottom: 4px; }
+
+    .school-map-wrap {
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      grid-template-rows: auto auto auto;
+      gap: 10px;
+      min-height: 0;
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .school-map {
+      width: 100%;
+      height: 760px;
+      min-height: 560px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .school-map-panel {
+      min-width: 0;
+    }
+
+    .school-data-card {
+      min-height: 0;
+      height: 760px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    .school-data-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 8px;
+    }
+
+    .school-data-head h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 11px;
+      letter-spacing: -0.03em;
+    }
+
+    .school-data-head p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .school-data-count {
+      flex: 0 0 auto;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      border: 1px solid #cfe0ff;
+      color: var(--blue);
+      font-size: 8px;
+      font-weight: 950;
+    }
+
+    .school-search {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .school-search-header {
+      grid-column: 1 / -1;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #f8fafc;
+    }
+
+    .school-search-copy h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 11px;
+      letter-spacing: -0.03em;
+    }
+
+    .school-search-copy p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .school-search-box {
+      display: grid;
+      gap: 5px;
+    }
+
+    .school-search-box span {
+      color: var(--blue);
+      font-size: 9px;
+      font-weight: 950;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .school-search input {
+      width: 100%;
+      height: 38px;
+      border: 2px solid #cfe0ff;
+      border-radius: 14px;
+      background: white;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 850;
+      padding: 0 12px;
+      box-shadow: inset 0 0 0 1px rgba(0, 56, 168, 0.04);
+    }
+
+    .school-search input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(0, 56, 168, 0.12);
+    }
+
+    .school-search input::placeholder {
+      color: #94a3b8;
+    }
+
+    .school-data-table-wrap {
+      min-height: 0;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+    }
+
+    .school-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8px;
+      font-weight: 850;
+    }
+
+    .school-data-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 7px 6px;
+      background: #f1f5f9;
+      color: var(--muted);
+      text-align: left;
+      font-size: 7px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .school-data-table td {
+      padding: 7px 6px;
+      border-bottom: 1px solid #eef2f7;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .school-data-table td:first-child {
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--blue);
+      font-weight: 950;
+    }
+
+    .school-data-table tr:hover td {
+      background: var(--blue-soft);
+      cursor: pointer;
+    }
+
+    .map-summary {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 850;
+    }
+
+    .map-summary strong {
+      color: var(--blue);
+      font-weight: 950;
+    }
+
+    .school-marker {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--marker-color, var(--blue));
+      border: 2px solid white;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
+    }
+
+    .school-marker::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: white;
+      opacity: 0.92;
+    }
+
+    .school-tooltip {
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .school-tooltip strong {
+      color: var(--blue);
+      font-weight: 950;
+    }
+
+    .school-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.48);
+      backdrop-filter: blur(6px);
+    }
+
+    .school-modal.open {
+      display: grid;
+    }
+
+    .school-modal-panel {
+      width: min(1040px, 96vw);
+      max-height: min(760px, 92vh);
+      overflow: auto;
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 26px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: 0 30px 90px rgba(15, 23, 42, 0.32);
+    }
+
+    .school-modal-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 4px 2px;
+    }
+
+    .school-modal-head h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.04em;
+    }
+
+    .school-modal-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: var(--muted);
+    }
+
+    .school-modal-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+    }
+
+    .school-info-card {
+      grid-column: span 4;
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+    }
+
+    .school-info-card.wide {
+      grid-column: span 8;
+    }
+
+    .school-info-card.full {
+      grid-column: span 12;
+    }
+
+    .school-info-card h3 {
+      margin: 0;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .modal-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 7px;
+    }
+
+    .modal-stat {
+      padding: 9px;
+      border-radius: 14px;
+      background: white;
+      border: 1px solid var(--line);
+    }
+
+    .modal-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 950;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .modal-stat strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .grade-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .grade-pill {
+      padding: 7px 5px;
+      border-radius: 11px;
+      background: white;
+      border: 1px solid var(--line);
+      text-align: center;
+      font-size: 8px;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .grade-pill strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--ink);
+      font-size: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .school-info-card,
+      .school-info-card.wide {
+        grid-column: span 12;
+      }
+
+      .grade-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .school-map-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .school-map,
+      .school-data-card {
+        height: 640px;
+      }
+
+      .school-search {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card[data-card="card-e"] .chart-stage {
+      grid-template-rows: auto auto;
+      overflow: visible;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .chart-card[data-card="card-e"] .analysis-note {
+      display: none !important;
+    }
+
+    .selected-context {
+      box-shadow: inset 0 0 0 2px rgba(0, 56, 168, 0.35), var(--shadow);
+    }
+
+    .chart-card:fullscreen {
+      background: var(--card);
+      padding: 28px;
+      border-radius: 0;
+      overflow: auto;
+    }
+
+    .chart-card:fullscreen .chart-stage { overflow: auto; }
+    .chart-card:fullscreen .bars { height: auto; gap: 10px; }
+    .chart-card:fullscreen .bar-row { font-size: 12px; }
+    .chart-card:fullscreen .bar-track { height: 24px; }
+    .chart-card:fullscreen .bar-segment { font-size: 11px; }
+    .chart-card:fullscreen .card-header h2 { font-size: 20px; }
+    .chart-card:fullscreen .card-header p { font-size: 13px; }
+    .chart-card:fullscreen .heatmap { font-size: 12px; }
+    .chart-card:fullscreen .legend-item { font-size: 11px; }
+    .chart-card:fullscreen .columns { height: 360px; }
+
+    .sub-point { cursor: pointer; }
+    .bar-segment.sub-point:hover { filter: brightness(1.15); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7); }
+    .column-wrap.sub-point:hover .column { transform: scaleY(1.05); filter: brightness(1.06); }
+    .pie-chip.sub-point { pointer-events: auto; }
+    .pie-chip.sub-point:hover { border-color: var(--blue); box-shadow: 0 12px 26px rgba(0, 56, 168, 0.22); }
+    .sub-dimmed { opacity: 0.3; }
+    .bar-segment.sub-active { box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.6); }
+    .pie-chip.sub-active { border-color: var(--ink); box-shadow: 0 12px 26px rgba(15, 23, 42, 0.25); }
+    .column-wrap.sub-active .column { box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.45); }
+
+    .tab-nav {
+      display: flex;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 14px;
+    }
+
+    .tab-btn {
+      height: 32px;
+      width: auto;
+      padding: 0 16px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: none;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: white;
+      color: var(--blue);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+    }
+
+    .page-jump {
+      height: 38px;
+      width: 38px;
+      padding: 0;
+      border-radius: 14px;
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+      box-shadow: 0 10px 24px rgba(0, 56, 168, 0.18);
+      font-size: 18px;
+      display: grid;
+      place-items: center;
+    }
+
+    .view {
+      display: grid;
+      min-height: 0;
+    }
+
+    .view.active {
+      display: grid;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    #view-descriptive.active {
+      grid-template-rows: auto 1fr;
+    }
+
+    #view-correlation.active {
+      grid-template-rows: auto;
+      align-content: start;
+    }
+
+    .charts-descriptive {
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: stretch;
+    }
+
+    .charts-descriptive .chart-card {
+      padding: 12px;
+      gap: 8px;
+    }
+
+    .charts-descriptive .chart-stage {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-a"] .chart-stage {
+      display: grid;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-b"] .chart-stage,
+    .charts-descriptive .chart-card[data-card="card-c"] .chart-stage {
+      justify-items: center;
+      overflow: hidden;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-b"] .donut {
+      width: 148px;
+      height: 148px;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-b"] .donut::after {
+      width: 94px;
+      height: 94px;
+      font-size: 20px;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-b"] .pie-chip {
+      font-size: 8px;
+      padding: 4px 7px;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-b"] .donut-area {
+      min-height: 170px;
+    }
+
+    .charts-descriptive .chart-card[data-card="card-c"] .columns {
+      height: min(210px, 100%);
+      width: 100%;
+      align-self: center;
+    }
+
+    .charts-correlation {
+      grid-template-rows: auto;
+      align-items: stretch;
+    }
+
+    .charts-correlation .chart-card {
+      min-height: 0;
+    }
+
+    .charts-correlation .chart-card[data-card="card-d"] .chart-stage {
+      grid-template-rows: auto auto;
+      align-content: start;
+    }
+
+    .multivar-wide {
+      grid-column: span 12;
+    }
+
+    .span-3 { grid-column: span 3; }
+    .descriptive-wide { grid-column: 1 / span 8; grid-row: 1; }
+    .descriptive-under-a { grid-column: 1 / span 4; grid-row: 2; }
+    .descriptive-right { grid-column: 9 / span 4; grid-row: 1; }
+    .descriptive-under-b { grid-column: 5 / span 4; grid-row: 2; }
+    .descriptive-under-c { grid-column: 9 / span 4; grid-row: 2; }
+
+    .desc-corr-controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(90px, 1fr)) auto;
+      align-items: end;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .desc-corr-controls label {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .desc-corr-controls label span {
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .desc-corr-controls select {
+      height: 30px;
+      width: 100%;
+      font-size: 11px;
+      padding: 0 8px;
+    }
+
+    .boxplot-wrap {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      gap: 6px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .boxplot-svg {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .box-line,
+    .box-whisker {
+      stroke: #64748b;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    .box-rect {
+      fill: rgba(0, 56, 168, 0.12);
+      stroke: var(--blue);
+      stroke-width: 2;
+      rx: 7;
+    }
+
+    .box-median {
+      stroke: var(--red);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+
+    .box-dot {
+      fill: var(--violet);
+      opacity: 0.72;
+    }
+
+    .box-label {
+      fill: var(--muted);
+      font-size: 8px;
+      font-weight: 900;
+    }
+
+    .box-value {
+      fill: var(--ink);
+      font-size: 8px;
+      font-weight: 950;
+    }
+
+    .analysis-note {
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .analysis-note strong {
+      color: var(--blue);
+      font-weight: 950;
+    }
+
+    .analysis-note {
+      align-self: end;
+    }
+
+    .corr-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 8px 14px;
+    }
+
+    .corr-controls.in-card {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(86px, 1fr)) auto;
+      align-items: end;
+      gap: 6px;
+      padding: 0;
+      margin-left: 0;
+      width: 100%;
+    }
+
+    .corr-controls label {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .corr-controls label span {
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .corr-controls select {
+      height: 30px;
+      font-size: 11px;
+      padding: 0 8px;
+    }
+
+    .corr-controls.in-card select {
+      width: 100%;
+    }
+
+    .heat-var-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .multiselect {
+      position: relative;
+    }
+
+    .multiselect-toggle {
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 850;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border: 1px solid #cfe0ff;
+      border-radius: 12px;
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .multiselect-toggle span {
+      display: inline-grid;
+      place-items: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: white;
+      font-size: 9px;
+    }
+
+    .multiselect-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 60;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 180px;
+      padding: 8px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+    }
+
+    .multiselect-panel.open {
+      display: flex;
+    }
+
+    .ms-option {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 9px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .ms-option:hover {
+      background: #f8fafc;
+    }
+
+    .ms-option input {
+      accent-color: var(--blue);
+      width: 13px;
+      height: 13px;
+      margin: 0;
+    }
+
+    .corr-r {
+      margin-left: 0;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      border: 1px solid #cfe0ff;
+      font-size: 11px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .scatter-wrap {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto auto;
+      gap: 5px;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .scatter-svg {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .axis-line {
+      stroke: #cbd5e1;
+      stroke-width: 1.5;
+    }
+
+    .scatter-dot circle {
+      fill: rgba(0, 56, 168, 0.72);
+      cursor: pointer;
+      transition: fill 160ms ease;
+    }
+
+    .scatter-dot:hover circle { fill: var(--blue); }
+
+    .bubble-dot circle {
+      fill: rgba(109, 40, 217, 0.42);
+      stroke: rgba(109, 40, 217, 0.9);
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: fill 160ms ease, transform 160ms ease;
+    }
+
+    .bubble-dot:hover circle { fill: rgba(109, 40, 217, 0.7); }
+
+    .scatter-dot text,
+    .bubble-dot text {
+      font-size: 7px;
+      font-weight: 900;
+      fill: var(--ink);
+      text-anchor: middle;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .scatter-axes {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 900;
+      padding-top: 4px;
+    }
+
+    .multivar-header {
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 8px;
+    }
+
+    .line-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .check-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 26px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 950;
+      letter-spacing: 0;
+      text-transform: none;
+      cursor: pointer;
+    }
+
+    .check-pill input {
+      accent-color: var(--blue);
+      width: 11px;
+      height: 11px;
+      margin: 0;
+    }
+
+    .multi-line-wrap {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 6px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .line-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 7px;
+      font-weight: 900;
+    }
+
+    .line-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8fafc;
+    }
+
+    /* Typography normalization */
+    .dashboard {
+      --font-label: 10px;
+      --font-caption: 11px;
+      --font-body: 12px;
+      --font-title: 13px;
+      --font-chart: 10px;
+      --font-value: 16px;
+    }
+
+    .eyebrow,
+    label span,
+    .kpi-label,
+    .badge,
+    .mini-table-head,
+    .chart-table th,
+    .school-data-table th,
+    .school-search-box span {
+      font-size: var(--font-label);
+    }
+
+    .card-header h2,
+    .school-data-head h3,
+    .school-search-copy h3,
+    .school-info-card h3 {
+      font-size: var(--font-title);
+    }
+
+    .card-header p,
+    .kpi-note,
+    .analysis-note,
+    .school-data-head p,
+    .school-search-copy p,
+    .map-summary,
+    .school-data-count,
+    .school-modal-head p {
+      font-size: var(--font-caption);
+    }
+
+    select,
+    button,
+    .filter-chip,
+    .timestamp,
+    .hover-row,
+    .school-search input,
+    .school-tooltip {
+      font-size: var(--font-body);
+    }
+
+    .legend-item,
+    .line-legend,
+    .chart-table,
+    .mini-table,
+    .school-data-table,
+    .heatmap,
+    .column-wrap,
+    .column-value,
+    .scatter-axes,
+    .box-label,
+    .box-value,
+    .pie-chip,
+    .pie-label,
+    .pie-pct {
+      font-size: var(--font-chart);
+    }
+
+    .bar-row,
+    .bar-segment,
+    .chart-card[data-card="card-a"] .bar-row,
+    .chart-card[data-card="card-a"] .bar-segment {
+      font-size: var(--font-chart) !important;
+    }
+
+    .scatter-dot text,
+    .bubble-dot text {
+      font-size: var(--font-chart);
+    }
+
+    .kpi-value,
+    .hover-row strong,
+    .modal-stat strong {
+      font-size: var(--font-value);
+    }
+
+    .chart-card[data-card="card-a"] .legend-item {
+      font-size: var(--font-chart);
+      padding: 3px 7px;
+    }
+
+    .chart-card[data-card="card-a"] .legend-swatch {
+      width: 9px;
+      height: 9px;
+    }
+
+    @media (max-width: 1180px) {
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 780px) {
+      .dashboard { padding: 10px; }
+      .topbar, .filters, .kpis, .donut-wrap, .card-controls { grid-template-columns: 1fr; }
+      .topbar { display: grid; }
+      .timestamp { justify-content: start; }
+      .kpis { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="dashboard" aria-label="Interactive learners teachers classrooms dashboard mockup">
+    <header class="card topbar">
+      <div class="brand">
+        <div class="mark">HQ</div>
+        <div>
+          <p class="eyebrow">InsightED Resource Balance</p>
+          <h1>STRIDE DASHBOARD</h1>
+          <p class="subtitle">Data sourced from InsightED Application</p>
+        </div>
+      </div>
+
+    </header>
+
+    <section class="card filters filters-bar" aria-label="Global dashboard filters">
+      <button type="button" class="back-filter" id="back-filter" disabled>← Back</button>
+      <label><span>Region</span><select id="region-filter"><option value="all">All Regions</option><option value="NCR">NCR</option><option value="CAR">CAR</option><option value="Region I">Region I</option><option value="Region II">Region II</option><option value="Region III">Region III</option><option value="Region IV-A">Region IV-A</option><option value="Region IV-B">Region IV-B</option><option value="Region V">Region V</option><option value="Region VI">Region VI</option><option value="Region VII">Region VII</option><option value="Region VIII">Region VIII</option><option value="Region IX">Region IX</option><option value="Region X">Region X</option><option value="Region XI">Region XI</option><option value="Region XII">Region XII</option><option value="Region XIII">Region XIII</option><option value="BARMM">BARMM</option></select></label>
+      <label><span>Municipality</span><select id="municipality-filter" disabled><option value="all">All Municipalities</option></select></label>
+      <label><span>Category</span><select id="global-category-filter"><option value="learners" selected>Learners</option><option value="teachers">Teachers</option><option value="classrooms">Classrooms</option><option value="enrolment">Enrolment</option><option value="classSize">Class Size</option><option value="modality">Shifting &amp; Modality</option><option value="facilities">Facilities</option><option value="schoolResources">School Resources</option></select></label>
+      <label><span>Sub-category</span><select id="subcategory-filter" disabled><option value="">All Sub-categories</option></select></label>
+      <div class="filter-chip">Active filter: <strong id="active-filter-label">All Regions</strong></div>
+      <button type="button" id="reset-filter">Reset</button>
+    </section>
+
+    <div class="view active" id="view-descriptive">
+    <section class="kpis" aria-label="Total summary cards" id="kpi-row"></section>
+
+    <section class="charts charts-descriptive" aria-label="Descriptive dashboard charts">
+      <article class="card chart-card descriptive-wide" data-card="card-a">
+        <div class="card-header"><div><h2>Card A · Regional Comparison</h2><p>Click a region to drill into its municipalities; every card updates.</p></div><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div>
+        <div class="chart-stage"></div>
+      </article>
+
+      <article class="card chart-card descriptive-under-a is-donut" data-card="card-b">
+        <div class="card-header"><div><h2>Card B · Composition / Mix</h2><p>Fixed donut view for compact composition comparison.</p></div><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div>
+        <div class="chart-stage"></div>
+      </article>
+
+      <article class="card chart-card descriptive-right" data-card="card-c">
+        <div class="card-header"><div><h2>Card C · Distribution</h2><p>Best for staffing, learner bands, or room-type distribution.</p></div><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div>
+        <div class="chart-stage"></div>
+      </article>
+
+      <article class="card chart-card descriptive-under-b" data-card="card-b-corr">
+        <div class="card-header multivar-header"><div><h2>Card P2 · Correlation Map</h2><p>Primary variable follows the selected category; choose a secondary measure and optional bubble size.</p></div><div class="desc-corr-controls" aria-label="Descriptive correlation controls"><label><span>Secondary</span><select id="desc-secondary"></select></label><label><span>Bubble</span><select id="desc-bubble"></select></label><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div></div>
+        <div class="chart-stage"></div>
+      </article>
+
+      <article class="card chart-card descriptive-under-c" data-card="card-c-box">
+        <div class="card-header"><div><h2>Card C2 · Box Plot</h2><p>Quartile spread for the active category across the current region or municipality set.</p></div><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div>
+        <div class="chart-stage"></div>
+      </article>
+    </section>
+    </div>
+
+    <div class="view" id="view-correlation">
+      <section class="charts charts-correlation" aria-label="Correlation dashboard charts">
+        <article class="card chart-card multivar-wide" data-card="card-d">
+          <div class="card-header multivar-header"><div><h2>Card D · Multivariate Heatmap</h2><p>Regions or municipalities run across the x-axis; selected variables run down the y-axis.</p></div><div class="heat-var-controls" aria-label="Heatmap variable controls"><div class="multiselect" id="heat-multiselect"><button type="button" class="multiselect-toggle" id="heat-ms-toggle">Variables <span id="heat-ms-count">6</span> ▾</button><div class="multiselect-panel" id="heat-ms-panel"><label class="ms-option"><input type="checkbox" data-heat-var="learners" checked> Learners</label><label class="ms-option"><input type="checkbox" data-heat-var="teachers" checked> Teachers</label><label class="ms-option"><input type="checkbox" data-heat-var="classrooms" checked> Classrooms</label><label class="ms-option"><input type="checkbox" data-heat-var="attendance" checked> Attendance</label><label class="ms-option"><input type="checkbox" data-heat-var="overcapacity" checked> Overcapacity</label><label class="ms-option"><input type="checkbox" data-heat-var="load" checked> Load</label></div></div><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div></div>
+          <div class="chart-stage"></div>
+        </article>
+        <article class="card chart-card multivar-wide" data-card="card-e">
+          <div class="card-header"><div><h2>Card E · Philippines School Map</h2><p>Sample school points respond to the region, municipality, category, and sub-category filters.</p></div><button type="button" class="fs-btn" data-fs aria-label="View fullscreen">⛶</button></div>
+          <div class="chart-stage"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <div class="school-modal" id="school-modal" aria-hidden="true">
+    <div class="school-modal-panel" role="dialog" aria-modal="true" aria-labelledby="school-modal-title">
+      <div class="school-modal-head">
+        <div>
+          <h2 id="school-modal-title">School profile</h2>
+          <p id="school-modal-subtitle">Click a school marker to view details.</p>
+        </div>
+        <button type="button" class="modal-close" id="school-modal-close" aria-label="Close school profile">×</button>
+      </div>
+      <div class="school-modal-grid" id="school-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const regions = [
+      {
+        name: "NCR",
+        learners: 3.8,
+        teachers: 118,
+        classrooms: 54,
+        attendance: 89,
+        overcapacity: 22,
+        load: 37,
+        learnerSplit: [51, 32, 17],
+        teacherSplit: [72, 18, 10],
+        roomSplit: [58, 25, 17],
+      },
+      {
+        name: "CAR",
+        learners: 0.9,
+        teachers: 34,
+        classrooms: 24,
+        attendance: 94,
+        overcapacity: 6,
+        load: 26,
+        learnerSplit: [52, 31, 17],
+        teacherSplit: [83, 12, 5],
+        roomSplit: [79, 15, 6],
+      },
+      {
+        name: "Region I",
+        learners: 1.7,
+        teachers: 61,
+        classrooms: 42,
+        attendance: 93,
+        overcapacity: 10,
+        load: 29,
+        learnerSplit: [53, 30, 17],
+        teacherSplit: [78, 14, 8],
+        roomSplit: [72, 18, 10],
+      },
+      {
+        name: "Region II",
+        learners: 1.2,
+        teachers: 45,
+        classrooms: 33,
+        attendance: 93,
+        overcapacity: 8,
+        load: 27,
+        learnerSplit: [52, 31, 17],
+        teacherSplit: [80, 13, 7],
+        roomSplit: [75, 16, 9],
+      },
+      {
+        name: "Region III",
+        learners: 2.9,
+        teachers: 96,
+        classrooms: 63,
+        attendance: 91,
+        overcapacity: 15,
+        load: 34,
+        learnerSplit: [54, 29, 17],
+        teacherSplit: [69, 21, 10],
+        roomSplit: [61, 24, 15],
+      },
+      {
+        name: "Region IV-A",
+        learners: 4.1,
+        teachers: 124,
+        classrooms: 71,
+        attendance: 88,
+        overcapacity: 24,
+        load: 36,
+        learnerSplit: [55, 29, 16],
+        teacherSplit: [66, 24, 10],
+        roomSplit: [55, 26, 19],
+      },
+      {
+        name: "Region IV-B",
+        learners: 1.1,
+        teachers: 41,
+        classrooms: 31,
+        attendance: 91,
+        overcapacity: 11,
+        load: 28,
+        learnerSplit: [53, 30, 17],
+        teacherSplit: [76, 16, 8],
+        roomSplit: [70, 19, 11],
+      },
+      {
+        name: "Region V",
+        learners: 2.1,
+        teachers: 74,
+        classrooms: 52,
+        attendance: 90,
+        overcapacity: 14,
+        load: 31,
+        learnerSplit: [54, 29, 17],
+        teacherSplit: [72, 19, 9],
+        roomSplit: [64, 22, 14],
+      },
+      {
+        name: "Region VI",
+        learners: 2.3,
+        teachers: 80,
+        classrooms: 57,
+        attendance: 91,
+        overcapacity: 13,
+        load: 32,
+        learnerSplit: [53, 30, 17],
+        teacherSplit: [73, 18, 9],
+        roomSplit: [66, 21, 13],
+      },
+      {
+        name: "Region VII",
+        learners: 2.4,
+        teachers: 82,
+        classrooms: 59,
+        attendance: 92,
+        overcapacity: 12,
+        load: 33,
+        learnerSplit: [51, 31, 18],
+        teacherSplit: [74, 17, 9],
+        roomSplit: [68, 20, 12],
+      },
+      {
+        name: "Region VIII",
+        learners: 1.5,
+        teachers: 56,
+        classrooms: 40,
+        attendance: 90,
+        overcapacity: 12,
+        load: 30,
+        learnerSplit: [54, 29, 17],
+        teacherSplit: [75, 17, 8],
+        roomSplit: [68, 20, 12],
+      },
+      {
+        name: "Region IX",
+        learners: 1.4,
+        teachers: 50,
+        classrooms: 36,
+        attendance: 89,
+        overcapacity: 13,
+        load: 31,
+        learnerSplit: [55, 29, 16],
+        teacherSplit: [74, 18, 8],
+        roomSplit: [65, 22, 13],
+      },
+      {
+        name: "Region X",
+        learners: 1.9,
+        teachers: 68,
+        classrooms: 48,
+        attendance: 90,
+        overcapacity: 15,
+        load: 32,
+        learnerSplit: [54, 29, 17],
+        teacherSplit: [71, 20, 9],
+        roomSplit: [62, 23, 15],
+      },
+      {
+        name: "Region XI",
+        learners: 1.8,
+        teachers: 66,
+        classrooms: 47,
+        attendance: 91,
+        overcapacity: 16,
+        load: 33,
+        learnerSplit: [54, 29, 17],
+        teacherSplit: [72, 19, 9],
+        roomSplit: [61, 24, 15],
+      },
+      {
+        name: "Region XII",
+        learners: 1.6,
+        teachers: 58,
+        classrooms: 41,
+        attendance: 89,
+        overcapacity: 17,
+        load: 33,
+        learnerSplit: [55, 28, 17],
+        teacherSplit: [70, 21, 9],
+        roomSplit: [60, 24, 16],
+      },
+      {
+        name: "Region XIII",
+        learners: 1.0,
+        teachers: 38,
+        classrooms: 28,
+        attendance: 90,
+        overcapacity: 12,
+        load: 29,
+        learnerSplit: [54, 29, 17],
+        teacherSplit: [76, 16, 8],
+        roomSplit: [67, 21, 12],
+      },
+      {
+        name: "BARMM",
+        learners: 1.3,
+        teachers: 44,
+        classrooms: 30,
+        attendance: 86,
+        overcapacity: 20,
+        load: 35,
+        learnerSplit: [57, 28, 15],
+        teacherSplit: [64, 25, 11],
+        roomSplit: [54, 27, 19],
+      },
+    ];
+
+    const municipalitiesByRegion = {
+      "NCR": ["Quezon City", "Manila", "Caloocan", "Makati"],
+      "CAR": ["Baguio", "Tabuk", "La Trinidad", "Bangued"],
+      "Region I": ["Dagupan", "Laoag", "San Fernando (LU)", "Vigan"],
+      "Region II": ["Tuguegarao", "Ilagan", "Santiago", "Cauayan"],
+      "Region III": ["San Fernando (Pa.)", "Angeles", "Malolos", "Cabanatuan"],
+      "Region IV-A": ["Calamba", "Antipolo", "Batangas City", "Lucena"],
+      "Region IV-B": ["Calapan", "Puerto Princesa", "Boac", "Romblon"],
+      "Region V": ["Legazpi", "Naga", "Sorsogon City", "Masbate City"],
+      "Region VI": ["Iloilo City", "Bacolod", "Roxas City", "Kalibo"],
+      "Region VII": ["Cebu City", "Mandaue", "Lapu-Lapu", "Tagbilaran"],
+      "Region VIII": ["Tacloban", "Ormoc", "Catbalogan", "Borongan"],
+      "Region IX": ["Zamboanga City", "Pagadian", "Dipolog", "Isabela City"],
+      "Region X": ["Cagayan de Oro", "Iligan", "Valencia", "Malaybalay"],
+      "Region XI": ["Davao City", "Tagum", "Digos", "Panabo"],
+      "Region XII": ["General Santos", "Koronadal", "Kidapawan", "Tacurong"],
+      "Region XIII": ["Butuan", "Surigao City", "Bayugan", "Bislig"],
+      "BARMM": ["Cotabato City", "Marawi", "Lamitan", "Jolo"],
+    };
+
+    const schoolRegionCenters = {
+      "NCR": [14.5995, 120.9842],
+      "CAR": [16.4023, 120.5960],
+      "Region I": [16.6159, 120.3209],
+      "Region II": [17.6132, 121.7270],
+      "Region III": [15.4828, 120.7120],
+      "Region IV-A": [14.1008, 121.0794],
+      "Region IV-B": [13.4108, 121.1803],
+      "Region V": [13.1391, 123.7438],
+      "Region VI": [10.7202, 122.5621],
+      "Region VII": [10.3157, 123.8854],
+      "Region VIII": [11.2448, 125.0035],
+      "Region IX": [7.1907, 122.1843],
+      "Region X": [8.4542, 124.6319],
+      "Region XI": [7.1907, 125.4553],
+      "Region XII": [6.1164, 125.1716],
+      "Region XIII": [8.9475, 125.5406],
+      "BARMM": [7.2236, 124.2464],
+    };
+
+    const schoolTypes = ["Central", "National", "Integrated", "Elementary", "High"];
+    const schoolsData = regions.flatMap((region, regionIndex) => {
+      const center = schoolRegionCenters[region.name] || [12.8797, 121.7740];
+      const municipalities = municipalitiesByRegion[region.name] || [region.name];
+      return Array.from({ length: 20 }, (_, index) => {
+        const municipality = municipalities[index % municipalities.length];
+        const angle = ((index * 137.5) + (regionIndex * 17)) * Math.PI / 180;
+        const radius = 0.10 + ((index % 6) * 0.035) + (region.name === "NCR" ? 0.02 : 0.06);
+        const learners = Math.round((region.learners * 1000000 / 20) * (0.62 + ((index % 7) * 0.08)));
+        const teachers = Math.max(8, Math.round((region.teachers * 1000 / 20) * (0.70 + ((index % 5) * 0.10))));
+        const classrooms = Math.max(4, Math.round((region.classrooms * 1000 / 20) * (0.68 + ((index % 6) * 0.08))));
+        return {
+          id: `${region.name}-${index + 1}`,
+          name: `${municipality} ${schoolTypes[index % schoolTypes.length]} School ${index + 1}`,
+          region: region.name,
+          division: `${municipality} Schools Division`,
+          municipality,
+          province: region.name === "NCR" ? "Metro Manila" : municipality,
+          legislativeDistrict: `Legislative District ${(index % 4) + 1}`,
+          schoolDistrict: `${municipality} School District ${(index % 3) + 1}`,
+          lat: +(center[0] + Math.cos(angle) * radius).toFixed(5),
+          lng: +(center[1] + Math.sin(angle) * radius).toFixed(5),
+          learners,
+          teachers,
+          classrooms,
+          attendance: Math.max(80, Math.min(99, region.attendance + ((index % 5) - 2))),
+          overcapacity: Math.max(0, region.overcapacity + ((index % 7) - 3)),
+          load: Math.max(16, region.load + ((index % 5) - 2)),
+          learnersByGrade: Array.from({ length: 12 }, (_, gradeIndex) => {
+            const weight = gradeIndex < 6 ? 0.09 : gradeIndex < 10 ? 0.075 : 0.055;
+            return Math.max(18, Math.round(learners * weight * (0.92 + ((index + gradeIndex) % 5) * 0.04)));
+          }),
+          teacherBreakdown: {
+            elementary: Math.round(teachers * 0.54),
+            juniorHigh: Math.round(teachers * 0.30),
+            seniorHigh: Math.max(1, teachers - Math.round(teachers * 0.54) - Math.round(teachers * 0.30)),
+          },
+          roomBreakdown: {
+            good: Math.round(classrooms * 0.58),
+            repair: Math.round(classrooms * 0.18),
+            demolition: Math.round(classrooms * 0.05),
+            fullyBuilt: Math.max(1, classrooms - Math.round(classrooms * 0.18) - Math.round(classrooms * 0.05)),
+          },
+        };
+      });
+    });
+
+    const categoryMeta = {
+      enrolment: {
+        label: "Enrolment",
+        code: "Enr",
+        unit: "%",
+        subs: [
+          ["#6d28d9", "Kinder", 14],
+          ["#0038a8", "Elementary", 46],
+          ["#0891b2", "Junior High", 25],
+          ["#16a34a", "Senior High", 15],
+        ],
+      },
+      classSize: {
+        label: "Class Size",
+        code: "Cls",
+        unit: "%",
+        subs: [
+          ["#16a34a", "Ideal (≤30)", 38],
+          ["#d97706", "Large (31-45)", 41],
+          ["#ce1126", "Crowded (46+)", 21],
+        ],
+      },
+      modality: {
+        label: "Modality",
+        code: "Mod",
+        unit: "%",
+        subs: [
+          ["#16a34a", "Single Shift", 58],
+          ["#d97706", "Double Shift", 24],
+          ["#0891b2", "Modular", 11],
+          ["#6d28d9", "Blended", 7],
+        ],
+      },
+      facilities: {
+        label: "Facilities",
+        code: "Fac",
+        unit: "%",
+        subs: [
+          ["#16a34a", "Electricity", 86],
+          ["#0891b2", "Water/Sanitation", 72],
+          ["#0038a8", "Internet", 49],
+          ["#d97706", "Health Clinic", 34],
+        ],
+      },
+      schoolResources: {
+        label: "School Resources",
+        code: "Res",
+        unit: "%",
+        subs: [
+          ["#16a34a", "Textbooks", 88],
+          ["#0038a8", "ICT Devices", 61],
+          ["#6d28d9", "Furniture", 74],
+          ["#d97706", "MOOE Use", 52],
+        ],
+      },
+    };
+
+    const barClassByColor = {
+      "#16a34a": "bar-green",
+      "#d97706": "bar-amber",
+      "#ce1126": "bar-red",
+      "#0038a8": "bar-blue",
+      "#6d28d9": "bar-violet",
+      "#0891b2": "bar-cyan",
+    };
+
+    const cardState = {
+      "card-a": { category: "learners", graph: "stacked" },
+      "card-b": { category: "learners", graph: "donut" },
+      "card-c": { category: "learners", graph: "histogram" },
+      "card-b-corr": { category: "correlation", graph: "descCorrelation" },
+      "card-c-box": { category: "distribution", graph: "boxplot" },
+      "card-d": { category: "pressure", graph: "heatmap" },
+      "card-e": { category: "schools", graph: "schoolMap" },
+    };
+
+    const corrVars = {
+      learners: { label: "Learners", get: (r) => r.learners },
+      teachers: { label: "Teachers", get: (r) => r.teachers },
+      classrooms: { label: "Classrooms", get: (r) => r.classrooms },
+      attendance: { label: "Attendance (%)", get: (r) => r.attendance },
+      overcapacity: { label: "Overcapacity (%)", get: (r) => r.overcapacity },
+      load: { label: "Teacher Load", get: (r) => r.load },
+    };
+
+    const varColors = {
+      learners: "#6d28d9",
+      teachers: "#16a34a",
+      classrooms: "#0891b2",
+      attendance: "#0038a8",
+      overcapacity: "#ce1126",
+      load: "#d97706",
+    };
+
+    let corrX = "load";
+    let corrY = "overcapacity";
+    let corrSize = "none";
+    let lineVars = ["learners", "teachers", "classrooms"];
+    let heatVars = ["learners", "teachers", "classrooms", "attendance", "overcapacity", "load"];
+    let descSecondary = "overcapacity";
+    let descBubble = "none";
+    let activeTab = "descriptive";
+    let schoolMap = null;
+    let schoolLayer = null;
+    let schoolMarkerIndex = {};
+    let schoolSearchQuery = "";
+    let schoolSearchDebounce = null;
+
+    let activeRegion = "all";
+    let activeMunicipality = "all";
+    let activeCategory = "learners";
+    let activeSubcategory = null;
+
+    const sum = (items, key) => items.reduce((total, row) => total + row[key], 0);
+    const avg = (items, key) => Math.round(sum(items, key) / Math.max(items.length, 1));
+
+    function municipalityRows(region) {
+      const names = municipalitiesByRegion[region.name] || [];
+      const weights = names.map((_, i) => 1 + (i % 3) * 0.25);
+      const weightSum = weights.reduce((total, w) => total + w, 0) || 1;
+      return names.map((name, i) => {
+        const share = weights[i] / weightSum;
+        const shift = (i % 3) - 1;
+        return {
+          name,
+          learners: +(region.learners * share).toFixed(2),
+          teachers: Math.max(1, Math.round(region.teachers * share)),
+          classrooms: Math.max(1, Math.round(region.classrooms * share)),
+          attendance: Math.max(80, Math.min(99, region.attendance + shift * 2)),
+          overcapacity: Math.max(2, region.overcapacity + shift * 3),
+          load: Math.max(20, region.load + shift * 2),
+          learnerSplit: region.learnerSplit,
+          teacherSplit: region.teacherSplit,
+          roomSplit: region.roomSplit,
+        };
+      });
+    }
+
+    const visibleRows = () => {
+      if (activeRegion === "all") return regions;
+      const region = regions.find((row) => row.name === activeRegion);
+      if (!region) return regions;
+      const muns = municipalityRows(region);
+      if (activeMunicipality !== "all") {
+        return muns.filter((row) => row.name === activeMunicipality);
+      }
+      return muns;
+    };
+
+    function primaryVarForCategory(category) {
+      const map = {
+        learners: "learners",
+        enrolment: "learners",
+        teachers: "teachers",
+        classrooms: "classrooms",
+        classSize: "classrooms",
+        modality: "classrooms",
+        facilities: "classrooms",
+        schoolResources: "classrooms",
+      };
+      return map[category] || "learners";
+    }
+
+    function ensureDescCorrelationSelections() {
+      const primary = primaryVarForCategory(activeCategory);
+      const lockedPrimary = activeCategory !== "overview";
+      const available = Object.keys(corrVars).filter((key) => !lockedPrimary || key !== primary);
+      if (!available.includes(descSecondary)) descSecondary = available[0] || "overcapacity";
+      if (descBubble !== "none" && !available.includes(descBubble)) descBubble = "none";
+    }
+
+    function renderDescCorrSelectors() {
+      const secondarySelect = document.getElementById("desc-secondary");
+      const bubbleSelect = document.getElementById("desc-bubble");
+      if (!secondarySelect || !bubbleSelect) return;
+      const primary = primaryVarForCategory(activeCategory);
+      const lockedPrimary = activeCategory !== "overview";
+      ensureDescCorrelationSelections();
+      const optionHtml = Object.keys(corrVars)
+        .filter((key) => !lockedPrimary || key !== primary)
+        .map((key) => `<option value="${key}"${key === descSecondary ? " selected" : ""}>${corrVars[key].label}</option>`)
+        .join("");
+      const bubbleHtml = `<option value="none"${descBubble === "none" ? " selected" : ""}>None</option>` + Object.keys(corrVars)
+        .filter((key) => !lockedPrimary || key !== primary)
+        .map((key) => `<option value="${key}"${key === descBubble ? " selected" : ""}>${corrVars[key].label}</option>`)
+        .join("");
+      secondarySelect.innerHTML = optionHtml;
+      bubbleSelect.innerHTML = bubbleHtml;
+    }
+
+    function formatLearners(value) {
+      return activeRegion === "all" ? value.toFixed(1) + "M" : value.toFixed(2) + "M";
+    }
+
+    function formatCount(value, unit = "K") {
+      if (unit === "M") return (activeRegion === "all" ? value.toFixed(1) : value.toFixed(2)) + "M";
+      return Math.max(0, Math.round(value)) + unit;
+    }
+
+    function categoryCountBase(category, t) {
+      if (category === "enrolment" || category === "learners") return { value: t.learners, unit: "M" };
+      if (category === "teachers") return { value: t.teachers, unit: "K" };
+      if (category === "modality") return { value: t.classrooms * 1.4, unit: "K" };
+      return { value: t.classrooms, unit: "K" };
+    }
+
+    function rowCategoryCountBase(category, row) {
+      if (category === "enrolment" || category === "learners") return { value: row.learners, unit: "M" };
+      if (category === "teachers") return { value: row.teachers, unit: "K" };
+      if (category === "modality") return { value: row.classrooms * 1.4, unit: "K" };
+      return { value: row.classrooms, unit: "K" };
+    }
+
+    function resolveSubcategory(subName) {
+      if (!subName) return null;
+      const learnerBands = { "Elementary": 0.52, "Junior High": 0.31, "Senior High": 0.17 };
+      const teacherTypes = { "Permanent": 0.78, "Contract": 0.14, "Substitute": 0.08 };
+      const roomTypes = { "Standard": 0.71, "Laboratories": 0.08, "Special": 0.21, "Optimal": 0.66, "Underused": 0.16, "Overcapacity": 0.18 };
+      if (learnerBands[subName] != null) return { metric: "learners", fraction: learnerBands[subName] };
+      if (teacherTypes[subName] != null) return { metric: "teachers", fraction: teacherTypes[subName] };
+      if (roomTypes[subName] != null) return { metric: "classrooms", fraction: roomTypes[subName] };
+      for (const key of Object.keys(categoryMeta)) {
+        const meta = categoryMeta[key];
+        const totalPct = meta.subs.reduce((acc, sub) => acc + sub[2], 0) || 1;
+        const found = meta.subs.find((sub) => sub[1] === subName);
+        if (found) return { metric: key === "enrolment" ? "learners" : "classrooms", fraction: found[2] / totalPct };
+      }
+      return null;
+    }
+
+    function totals() {
+      const rows = visibleRows();
+      let learners = sum(rows, "learners");
+      let teachers = sum(rows, "teachers");
+      let classrooms = sum(rows, "classrooms");
+      const attendance = avg(rows, "attendance");
+      const overcapacity = avg(rows, "overcapacity");
+
+      const sub = resolveSubcategory(activeSubcategory);
+      if (sub) {
+        if (sub.metric === "learners") learners = +(learners * sub.fraction).toFixed(2);
+        if (sub.metric === "teachers") teachers = teachers * sub.fraction;
+        if (sub.metric === "classrooms") classrooms = classrooms * sub.fraction;
+      }
+
+      const load = Math.round((learners * 1000000) / Math.max(teachers * 1000, 1));
+
+      return { learners, teachers, classrooms, attendance, overcapacity, load };
+    }
+
+    function kpiCardsForCategory(category, t) {
+      if (category === "learners") {
+        return {
+          total: { label: "Total Learners", value: formatLearners(t.learners) },
+          subs: [
+            { color: "#6d28d9", name: "Elementary", value: formatLearners(t.learners * 0.52), note: "Learner count" },
+            { color: "#0038a8", name: "Junior High", value: formatLearners(t.learners * 0.31), note: "Learner count" },
+            { color: "#0891b2", name: "Senior High", value: formatLearners(t.learners * 0.17), note: "Learner count" },
+          ],
+        };
+      }
+      if (category === "teachers") {
+        return {
+          total: { label: "Total Teachers", value: Math.round(t.teachers) + "K" },
+          subs: [
+            { color: "#16a34a", name: "Permanent", value: Math.round(t.teachers * 0.78) + "K", note: "Teacher count" },
+            { color: "#d97706", name: "Contract", value: Math.round(t.teachers * 0.14) + "K", note: "Teacher count" },
+            { color: "#ce1126", name: "Substitute", value: Math.round(t.teachers * 0.08) + "K", note: "Teacher count" },
+          ],
+        };
+      }
+      if (category === "classrooms") {
+        return {
+          total: { label: "Total Classrooms", value: Math.round(t.classrooms) + "K" },
+          subs: [
+            { color: "#0891b2", name: "Standard", value: Math.round(t.classrooms * 0.71) + "K", note: "Room count" },
+            { color: "#0038a8", name: "Laboratories", value: Math.round(t.classrooms * 0.08) + "K", note: "Room count" },
+            { color: "#6d28d9", name: "Special", value: Math.round(t.classrooms * 0.21) + "K", note: "Room count" },
+          ],
+        };
+      }
+      const meta = categoryMeta[category];
+      if (meta) {
+        const totalPct = meta.subs.reduce((acc, sub) => acc + sub[2], 0) || 1;
+        if (category === "enrolment") {
+          return {
+            total: { label: "Total Enrolment", value: formatLearners(t.learners) },
+            subs: meta.subs.map(([color, name, value]) => ({ color, name, value: formatLearners(t.learners * (value / totalPct)), note: Math.round((value / totalPct) * 100) + "% of enrolment" })),
+          };
+        }
+        if (category === "classSize") {
+          const base = categoryCountBase(category, t);
+          return {
+            total: { label: "Total Classes", value: formatCount(base.value, base.unit) },
+            subs: meta.subs.map(([color, name, value]) => ({ color, name, value: formatCount(base.value * (value / totalPct), base.unit), note: "Class count" })),
+          };
+        }
+        if (category === "modality") {
+          const base = categoryCountBase(category, t);
+          return {
+            total: { label: "Total Sections", value: formatCount(base.value, base.unit) },
+            subs: meta.subs.map(([color, name, value]) => ({ color, name, value: formatCount(base.value * (value / totalPct), base.unit), note: "Section count" })),
+          };
+        }
+        const base = categoryCountBase(category, t);
+        return {
+          total: { label: category === "facilities" ? "Facility Count" : "Resource Count", value: formatCount(base.value, base.unit) },
+          subs: meta.subs.map(([color, name, value]) => ({ color, name, value: formatCount(base.value * (value / 100), base.unit), note: "Estimated count" })),
+        };
+      }
+      return { total: { label: "Total", value: formatLearners(t.learners) }, subs: [] };
+    }
+
+    function categoryKpiTemplate(t) {
+      const config = kpiCardsForCategory(activeCategory, t);
+      const totalCard = `<article class="card kpi kpi-total"><div class="kpi-top"><span class="kpi-label">${config.total.label}</span><span class="badge badge-total">Total</span></div><div class="kpi-value">${config.total.value}</div><div class="kpi-note">${config.total.note || "Across current selection"}</div></article>`;
+      const subCards = config.subs.map((sub) => `<article class="card kpi"><div class="kpi-accent" style="background:${sub.color}"></div><div class="kpi-top"><span class="kpi-label">${sub.name}</span></div><div class="kpi-value" style="color:${sub.color}">${sub.value}</div><div class="kpi-note">${sub.note || ""}</div></article>`).join("");
+      return totalCard + subCards;
+    }
+
+    function kpiTemplate() {
+      const t = totals();
+
+      if (activeCategory !== "overview") {
+        return categoryKpiTemplate(t);
+      }
+
+      return `
+        <article class="card kpi"><div class="kpi-top"><span class="kpi-label">Learners</span><span class="badge violet">Total</span></div><div class="kpi-value">${formatLearners(t.learners)}</div><div class="kpi-note">Hover for breakdown</div><div class="hover-card"><div class="hover-row"><span>Elementary</span><strong>${formatLearners(t.learners * 0.52)}</strong></div><div class="hover-row"><span>Junior High School</span><strong>${formatLearners(t.learners * 0.31)}</strong></div><div class="hover-row"><span>Senior High School</span><strong>${formatLearners(t.learners * 0.17)}</strong></div></div></article>
+        <article class="card kpi"><div class="kpi-top"><span class="kpi-label">Attendance</span><span class="badge healthy">Good</span></div><div class="kpi-value">${t.attendance}%</div><div class="kpi-note">Hover for breakdown</div><div class="hover-card"><div class="hover-row"><span>Regular attendance</span><strong>${Math.max(t.attendance - 9, 0)}%</strong></div><div class="hover-row"><span>At-risk attendance</span><strong>${100 - t.attendance}%</strong></div><div class="hover-row"><span>Target</span><strong>90%</strong></div></div></article>
+        <article class="card kpi"><div class="kpi-top"><span class="kpi-label">Teachers</span><span class="badge healthy">Staffed</span></div><div class="kpi-value">${Math.round(t.teachers)}K</div><div class="kpi-note">Hover for breakdown</div><div class="hover-card"><div class="hover-row"><span>Permanent</span><strong>78%</strong></div><div class="hover-row"><span>Contract</span><strong>14%</strong></div><div class="hover-row"><span>Substitute</span><strong>8%</strong></div></div></article>
+        <article class="card kpi"><div class="kpi-top"><span class="kpi-label">Teacher Load</span><span class="badge watch">Watch</span></div><div class="kpi-value">1:${t.load}</div><div class="kpi-note">Hover for breakdown</div><div class="hover-card"><div class="hover-row"><span>Elementary ratio</span><strong>1:${Math.max(t.load - 2, 1)}</strong></div><div class="hover-row"><span>Junior High ratio</span><strong>1:${t.load + 3}</strong></div><div class="hover-row"><span>Senior High ratio</span><strong>1:${t.load + 1}</strong></div></div></article>
+        <article class="card kpi"><div class="kpi-top"><span class="kpi-label">Classrooms</span><span class="badge cyan">Inventory</span></div><div class="kpi-value">${Math.round(t.classrooms)}K</div><div class="kpi-note">Hover for breakdown</div><div class="hover-card"><div class="hover-row"><span>Standard rooms</span><strong>71%</strong></div><div class="hover-row"><span>Laboratories</span><strong>8%</strong></div><div class="hover-row"><span>Special rooms</span><strong>21%</strong></div></div></article>
+        <article class="card kpi"><div class="kpi-top"><span class="kpi-label">Overcapacity</span><span class="badge risk">Action</span></div><div class="kpi-value">${t.overcapacity}%</div><div class="kpi-note">Hover for breakdown</div><div class="hover-card"><div class="hover-row"><span>Current overcapacity</span><strong>${t.overcapacity}%</strong></div><div class="hover-row"><span>Target threshold</span><strong>&lt;10%</strong></div><div class="hover-row"><span>Priority area</span><strong>${activeRegion === "all" ? "Urban clusters" : activeRegion}</strong></div></div></article>
+      `;
+    }
+
+    function stackedChart(category) {
+      const rows = visibleRows();
+      const legendRows =
+        category === "learners"
+          ? [["#6d28d9", "Elementary"], ["#0038a8", "Junior High"], ["#0891b2", "Senior High"]]
+          : category === "teachers"
+            ? [["#16a34a", "Permanent"], ["#d97706", "Contract"], ["#ce1126", "Substitute"]]
+            : category === "classrooms"
+              ? [["#0891b2", "Standard"], ["#d97706", "Underused"], ["#ce1126", "Overcapacity"]]
+              : categoryMeta[category]
+                ? categoryMeta[category].subs.map(([color, subLabel]) => [color, subLabel])
+                : [["#6d28d9", "Learners"], ["#16a34a", "Teachers"], ["#d97706", "Classrooms"]];
+
+      const subInChart = activeSubcategory && legendRows.some(([, name]) => name === activeSubcategory);
+      const rowCount = rows.length;
+      const barHeight = rowCount <= 4 ? 44 : rowCount <= 8 ? 34 : rowCount <= 12 ? 26 : 20;
+      const barGap = rowCount <= 4 ? 12 : rowCount <= 8 ? 8 : rowCount <= 12 ? 5 : 3;
+      const barFont = rowCount <= 4 ? 16 : rowCount <= 8 ? 14 : 12;
+      const segmentFont = rowCount <= 4 ? 16 : rowCount <= 8 ? 14 : 12;
+      const longestLabel = Math.max(...rows.map((row) => row.name.length), 10);
+      const labelWidth = Math.min(190, Math.max(110, longestLabel * 7));
+      const valueWidth = activeRegion === "all" ? 62 : 68;
+
+      return `
+        <div class="bars" style="--bar-height:${barHeight}px;--bar-gap:${barGap}px;--bar-font:${barFont}px;--bar-segment-font:${segmentFont}px;--bar-label-width:${labelWidth}px;--bar-value-width:${valueWidth}px;grid-template-rows:repeat(${rowCount},var(--bar-height))">
+          ${(() => {
+            const chartRows = rows.map((row) => {
+              let rawSegments;
+              let label;
+
+              if (category === "learners") {
+                rawSegments = [
+                  ["bar-violet", row.learners * row.learnerSplit[0] / 100, (row.learners * row.learnerSplit[0] / 100).toFixed(1) + "M"],
+                  ["bar-blue", row.learners * row.learnerSplit[1] / 100, (row.learners * row.learnerSplit[1] / 100).toFixed(1) + "M"],
+                  ["bar-cyan", row.learners * row.learnerSplit[2] / 100, (row.learners * row.learnerSplit[2] / 100).toFixed(1) + "M"],
+                ];
+                label = row.learners.toFixed(1) + "M";
+              } else if (category === "teachers") {
+                rawSegments = [
+                  ["bar-green", row.teachers * row.teacherSplit[0] / 100, Math.round(row.teachers * row.teacherSplit[0] / 100) + "K"],
+                  ["bar-amber", row.teachers * row.teacherSplit[1] / 100, Math.round(row.teachers * row.teacherSplit[1] / 100) + "K"],
+                  ["bar-red", row.teachers * row.teacherSplit[2] / 100, Math.round(row.teachers * row.teacherSplit[2] / 100) + "K"],
+                ];
+                label = row.teachers + "K";
+              } else if (category === "classrooms") {
+                rawSegments = [
+                  ["bar-cyan", row.classrooms * row.roomSplit[0] / 100, Math.round(row.classrooms * row.roomSplit[0] / 100) + "K"],
+                  ["bar-amber", row.classrooms * row.roomSplit[1] / 100, Math.round(row.classrooms * row.roomSplit[1] / 100) + "K"],
+                  ["bar-red", row.classrooms * row.roomSplit[2] / 100, Math.round(row.classrooms * row.roomSplit[2] / 100) + "K"],
+                ];
+                label = row.classrooms + "K";
+              } else if (categoryMeta[category]) {
+                const meta = categoryMeta[category];
+                const base = rowCategoryCountBase(category, row);
+                const totalPct = meta.subs.reduce((acc, sub) => acc + sub[2], 0) || 1;
+                const isCoverageCategory = category === "facilities" || category === "schoolResources";
+                rawSegments = meta.subs.map(([color, subLabel, value]) => {
+                  const count = base.value * (isCoverageCategory ? value / 100 : value / totalPct);
+                  return [barClassByColor[color] || "bar-blue", count, formatCount(count, base.unit)];
+                });
+                label = formatCount(base.value, base.unit);
+              } else {
+                rawSegments = [
+                  ["bar-violet", row.learners, row.learners.toFixed(1) + "M"],
+                  ["bar-green", row.teachers / 100, row.teachers + "K"],
+                  ["bar-amber", row.classrooms / 100, row.classrooms + "K"],
+                ];
+                label = row.attendance + "%";
+              }
+
+              const total = rawSegments.reduce((sum, [, value]) => sum + value, 0);
+              return { row, rawSegments, total, label };
+            });
+
+            const maxTotal = Math.max(...chartRows.map((item) => item.total), 1);
+
+            return chartRows.map(({ row, rawSegments, total, label }) => {
+              const stackWidth = Math.max(12, (total / maxTotal) * 100);
+              const segments = rawSegments.map(([cls, value, display]) => [cls, (value / total) * 100, display]);
+              return `<div class="bar-row data-point" data-region="${row.name}"><span class="bar-label">${row.name}</span><div class="bar-track"><div class="bar-stack" style="width:${stackWidth}%">${segments.map(([cls, width, display], i) => `<span class="${cls} bar-segment sub-point${subInChart ? ((legendRows[i] || [])[1] === activeSubcategory ? ' sub-active' : ' sub-dimmed') : ''}" data-subcategory="${(legendRows[i] || [])[1] || ''}" data-category="${category}" style="width:${width}%">${display}</span>`).join("")}</div></div><span>${label}</span></div>`;
+            }).join("");
+          })()}
+        </div>
+        <div class="chart-legend">
+          ${legendRows.map(([color, name]) => `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span><strong>${name}</strong></span>`).join("")}
+        </div>
+      `;
+    }
+
+    function oldStackedChartReferenceOnly(category) {
+      const rows = visibleRows();
+
+      return `
+        <div class="bars">
+          ${rows.map((row) => {
+            let segments;
+            let label;
+
+            if (category === "learners") {
+              segments = [
+                ["bar-violet", row.learnerSplit[0]],
+                ["bar-blue", row.learnerSplit[1]],
+                ["bar-cyan", row.learnerSplit[2]],
+              ];
+              label = row.learners.toFixed(1) + "M";
+            } else if (category === "teachers") {
+              segments = [
+                ["bar-green", row.teacherSplit[0]],
+                ["bar-amber", row.teacherSplit[1]],
+                ["bar-red", row.teacherSplit[2]],
+              ];
+              label = row.teachers + "K";
+            } else if (category === "classrooms") {
+              segments = [
+                ["bar-cyan", row.roomSplit[0]],
+                ["bar-amber", row.roomSplit[1]],
+                ["bar-red", row.roomSplit[2]],
+              ];
+              label = row.classrooms + "K";
+            } else {
+              segments = [
+                ["bar-violet", Math.min(row.learners * 12, 52)],
+                ["bar-green", Math.min(row.teachers / 4, 34)],
+                ["bar-amber", Math.min(row.classrooms / 3, 30)],
+              ];
+              label = row.attendance + "%";
+            }
+
+            return `<div class="bar-row data-point" data-region="${row.name}"><span class="bar-label">${row.name}</span><div class="bar-track">${segments.map(([cls, width]) => `<span class="${cls} bar-segment" style="width:${width}%">${Math.round(width)}%</span>`).join("")}</div><span>${label}</span></div>`;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function donutChart(category) {
+      const t = totals();
+      let donutClass = "";
+      let center = formatLearners(t.learners);
+      let rows = [
+        ["#6d28d9", "Elementary", "52%"],
+        ["#0038a8", "Junior High", "31%"],
+        ["#0891b2", "Senior High", "17%"],
+      ];
+
+      if (category === "teachers") {
+        donutClass = "teacher";
+        center = Math.round(t.teachers) + "K";
+        rows = [["#16a34a", "Permanent", "78%"], ["#d97706", "Contract", "14%"], ["#ce1126", "Substitute", "8%"]];
+      }
+
+      if (category === "classrooms" || category === "utilization") {
+        donutClass = "room";
+        center = category === "utilization" ? t.overcapacity + "%" : Math.round(t.classrooms) + "K";
+        rows = [["#16a34a", "Optimal", "66%"], ["#d97706", "Underused", "16%"], ["#ce1126", "Overcapacity", "18%"]];
+      }
+
+      let donutStyle = "";
+      if (categoryMeta[category]) {
+        const meta = categoryMeta[category];
+        const totalPct = meta.subs.reduce((total, sub) => total + sub[2], 0) || 1;
+        let acc = 0;
+        const stops = meta.subs.map(([color, , value]) => {
+          const start = (acc / totalPct) * 100;
+          acc += value;
+          const end = (acc / totalPct) * 100;
+          return `${color} ${start.toFixed(1)}% ${end.toFixed(1)}%`;
+        }).join(", ");
+        donutStyle = `background: conic-gradient(${stops});`;
+        donutClass = "";
+        center = meta.code;
+        rows = meta.subs.map(([color, name, value]) => [color, name, Math.round((value / totalPct) * 100) + "%"]);
+      }
+
+      const subInChart = activeSubcategory && rows.some(([, name]) => name === activeSubcategory);
+      let cumulative = 0;
+      const positionedLabels = rows.map(([color, name, value]) => {
+        const pct = parseFloat(value);
+        const mid = cumulative + pct / 2;
+        cumulative += pct;
+        const angle = (mid / 100) * 2 * Math.PI;
+        const radius = 84;
+        const x = Math.sin(angle) * radius;
+        const y = -Math.cos(angle) * radius;
+        return `<span class="pie-chip sub-point${subInChart ? (name === activeSubcategory ? ' sub-active' : ' sub-dimmed') : ''}" data-subcategory="${name}" data-category="${category}" style="left:calc(50% + ${x.toFixed(1)}px);top:calc(50% + ${y.toFixed(1)}px)"><span class="legend-swatch" style="background:${color}"></span><strong>${name}</strong><span class="legend-pct">${value}</span></span>`;
+      }).join("");
+      const tableRows = rows.map(([color, name, value]) => `<div class="mini-table-row sub-point${subInChart ? (name === activeSubcategory ? ' sub-active' : ' sub-dimmed') : ''}" data-subcategory="${name}" data-category="${category}"><span class="table-label"><span class="legend-swatch" style="background:${color}"></span>${name}</span><strong>${value}</strong></div>`).join("");
+
+      return `
+        <div class="chart-combo donut-wrap data-point" data-region="${activeRegion === "all" ? "Region IV-A" : activeRegion}">
+          <div class="donut-area">
+            <div class="donut ${donutClass}" data-center="${center}" style="${donutStyle}"></div>
+            ${positionedLabels}
+          </div>
+          <div class="mini-table" aria-label="Card B table view"><div class="mini-table-head"><span>Segment</span><span>Share</span></div>${tableRows}</div>
+        </div>
+      `;
+    }
+
+    function histogramChart(category) {
+      const t = totals();
+      const learners = t.learners;
+      const teachers = Math.round(t.teachers);
+      const rooms = Math.round(t.classrooms);
+
+      let bars;
+      let suffix = "";
+
+      if (category === "classrooms") {
+        suffix = "K";
+        bars = [
+          ["Standard", Math.round(rooms * 0.71), "#0891b2", "#67e8f9"],
+          ["Laboratories", Math.round(rooms * 0.08), "#0038a8", "#60a5fa"],
+          ["Special", Math.round(rooms * 0.21), "#6d28d9", "#c084fc"],
+        ];
+      } else if (category === "learners") {
+        suffix = "M";
+        bars = [
+          ["Elementary", +(learners * 0.52).toFixed(1), "#6d28d9", "#c084fc"],
+          ["Junior High", +(learners * 0.31).toFixed(1), "#0038a8", "#60a5fa"],
+          ["Senior High", +(learners * 0.17).toFixed(1), "#0891b2", "#67e8f9"],
+        ];
+      } else if (categoryMeta[category]) {
+        const meta = categoryMeta[category];
+        suffix = "%";
+        const totalPct = meta.subs.reduce((acc, sub) => acc + sub[2], 0) || 1;
+        bars = meta.subs.map(([color, name, value]) => [name, Math.round((value / totalPct) * 100), color, color]);
+      } else {
+        suffix = "K";
+        bars = [
+          ["Permanent", Math.round(teachers * 0.78), "#16a34a", "#86efac"],
+          ["Contract", Math.round(teachers * 0.14), "#d97706", "#fcd34d"],
+          ["Substitute", Math.round(teachers * 0.08), "#ce1126", "#fb7185"],
+        ];
+      }
+
+      const maxValue = Math.max(...bars.map((bar) => bar[1]), 1);
+      const subInChart = activeSubcategory && bars.some((bar) => bar[0] === activeSubcategory);
+      const tableRows = bars.map(([label, value, start, end]) => `<tr class="sub-point${subInChart ? (label === activeSubcategory ? ' sub-active' : ' sub-dimmed') : ''}" data-subcategory="${label}" data-category="${category}"><td><span class="table-label"><span class="legend-swatch" style="background:${start}"></span>${label}</span></td><td>${value}${suffix}</td></tr>`).join("");
+
+      return `<div class="chart-combo"><div class="columns" style="grid-template-columns:repeat(${bars.length}, 1fr)">${bars.map(([label, value, start, end], index) => `<div class="column-wrap sub-point${subInChart ? (label === activeSubcategory ? ' sub-active' : ' sub-dimmed') : ''}" data-subcategory="${label}" data-category="${category}"><span class="column-value">${value}${suffix}</span><div class="column" style="height:${Math.max(20, Math.round((value / maxValue) * 150))}px;background:linear-gradient(180deg,${start},${end})"></div><span>${label}</span></div>`).join("")}</div><table class="chart-table" aria-label="Card C table view"><thead><tr><th>Category</th><th>Value</th></tr></thead><tbody>${tableRows}</tbody></table></div>`;
+    }
+
+    function boxPlotChart(category) {
+      const metricKey = primaryVarForCategory(category);
+      const rows = visibleRows();
+      const values = rows.map((row) => corrVars[metricKey].get(row)).sort((a, b) => a - b);
+      const valueAt = (p) => {
+        if (!values.length) return 0;
+        const index = (values.length - 1) * p;
+        const lower = Math.floor(index);
+        const upper = Math.ceil(index);
+        return values[lower] + ((values[upper] - values[lower]) || 0) * (index - lower);
+      };
+      const min = valueAt(0);
+      const q1 = valueAt(0.25);
+      const med = valueAt(0.5);
+      const q3 = valueAt(0.75);
+      const max = valueAt(1);
+      const span = (max - min) || 1;
+      const x = (value) => 34 + ((value - min) / span) * 248;
+      const formatValue = (value) => metricKey === "learners" ? value.toFixed(2) + "M" : metricKey === "attendance" || metricKey === "overcapacity" ? Math.round(value) + "%" : Math.round(value) + (metricKey === "load" ? "" : "K");
+      const dots = rows.map((row, index) => `<circle class="box-dot data-point" data-region="${row.name}" cx="${x(corrVars[metricKey].get(row)).toFixed(1)}" cy="${78 + ((index % 5) - 2) * 4}" r="3.2"><title>${row.name}: ${formatValue(corrVars[metricKey].get(row))}</title></circle>`).join("");
+      const spreadLabel = (q3 - q1) > span * 0.45 ? "wide" : (q3 - q1) < span * 0.2 ? "tight" : "moderate";
+      const sortedBoxRows = rows
+        .map((row) => ({ row, value: corrVars[metricKey].get(row) }))
+        .sort((a, b) => a.value - b.value);
+      const lowBox = sortedBoxRows[0];
+      const highBox = sortedBoxRows[sortedBoxRows.length - 1];
+      const nearMedianBox = sortedBoxRows.reduce((best, item) => Math.abs(item.value - med) < Math.abs(best.value - med) ? item : best, sortedBoxRows[0]);
+      const boxInsight = `${highBox.row.name} is the highest displayed ${corrVars[metricKey].label.toLowerCase()} value at ${formatValue(highBox.value)}, while ${lowBox.row.name} is lowest at ${formatValue(lowBox.value)}. The median is closest to ${nearMedianBox.row.name} at ${formatValue(med)}, and the middle 50% runs from ${formatValue(q1)} to ${formatValue(q3)}, so this ${spreadLabel} spread points to ${spreadLabel === "wide" ? "uneven planning needs across the displayed areas" : spreadLabel === "tight" ? "fairly consistent conditions across the displayed areas" : "moderate variation rather than a single outlier-only issue"}.`;
+      return `<div class="boxplot-wrap"><svg class="boxplot-svg" viewBox="0 0 320 150" preserveAspectRatio="xMidYMid meet"><line class="box-line" x1="${x(min).toFixed(1)}" y1="75" x2="${x(max).toFixed(1)}" y2="75"></line><line class="box-whisker" x1="${x(min).toFixed(1)}" y1="58" x2="${x(min).toFixed(1)}" y2="92"></line><line class="box-whisker" x1="${x(max).toFixed(1)}" y1="58" x2="${x(max).toFixed(1)}" y2="92"></line><rect class="box-rect" x="${x(q1).toFixed(1)}" y="48" width="${Math.max(8, x(q3) - x(q1)).toFixed(1)}" height="54"></rect><line class="box-median" x1="${x(med).toFixed(1)}" y1="44" x2="${x(med).toFixed(1)}" y2="106"></line>${dots}<text class="box-label" x="34" y="128">Min</text><text class="box-label" x="${x(q1).toFixed(1)}" y="30" text-anchor="middle">Q1</text><text class="box-label" x="${x(med).toFixed(1)}" y="122" text-anchor="middle">Median</text><text class="box-label" x="${x(q3).toFixed(1)}" y="30" text-anchor="middle">Q3</text><text class="box-label" x="282" y="128" text-anchor="end">Max</text><text class="box-value" x="160" y="16" text-anchor="middle">${corrVars[metricKey].label} spread · ${rows.length} ${activeRegion === "all" ? "regions" : "municipalities"}</text></svg><div class="chart-legend"><span class="legend-item"><strong>Min</strong> ${formatValue(min)}</span><span class="legend-item"><strong>Median</strong> ${formatValue(med)}</span><span class="legend-item"><strong>Max</strong> ${formatValue(max)}</span></div><div class="analysis-note"><strong>Analysis:</strong> ${boxInsight}</div></div>`;
+    }
+
+    function heatmapChart() {
+      const rows = visibleRows();
+      const metricMap = {
+        learners: { label: "Learners", format: (r) => formatLearners(r.learners), tone: (r) => (r.learners > 3 ? "risk" : r.learners > 1.5 ? "warn" : "good") },
+        teachers: { label: "Teachers", format: (r) => Math.round(r.teachers) + "K", tone: (r) => (r.teachers > 90 ? "risk" : r.teachers > 50 ? "warn" : "good") },
+        classrooms: { label: "Classrooms", format: (r) => Math.round(r.classrooms) + "K", tone: (r) => (r.classrooms > 55 ? "risk" : r.classrooms > 38 ? "warn" : "good") },
+        attendance: { label: "Attendance", format: (r) => r.attendance + "%", tone: (r) => (r.attendance < 88 ? "risk" : r.attendance < 92 ? "warn" : "good") },
+        overcapacity: { label: "Overcapacity", format: (r) => r.overcapacity + "%", tone: (r) => (r.overcapacity > 18 ? "risk" : r.overcapacity > 10 ? "warn" : "good") },
+        load: { label: "Load", format: (r) => "1:" + r.load, tone: (r) => (r.load > 34 ? "risk" : r.load > 30 ? "warn" : "good") },
+      };
+      const selected = heatVars.length ? heatVars : ["learners"];
+      const headers = rows.map((row) => `<div class="heat-head">${row.name.replace("Region ", "R")}</div>`).join("");
+      const body = selected.map((key) => {
+        const metric = metricMap[key];
+        const cells = rows.map((row) => `<div class="heat-cell ${metric.tone(row)} data-point" data-region="${row.name}">${metric.format(row)}</div>`).join("");
+        return `<div class="heat-label">${metric.label}</div>${cells}`;
+      }).join("");
+
+      return `<div class="heat-scroll"><div class="heatmap heatmap-wide" style="--heat-cols:${rows.length}"><div></div>${headers}${body}</div></div>`;
+    }
+
+    function filteredSchools() {
+      return schoolsData.filter((school) => {
+        if (activeRegion !== "all" && school.region !== activeRegion) return false;
+        if (activeMunicipality !== "all" && school.municipality !== activeMunicipality) return false;
+        return true;
+      });
+    }
+
+    function h(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    }
+
+    function schoolSearchText(school) {
+      return [school.name, school.region, school.division, school.municipality, school.province, school.legislativeDistrict, school.schoolDistrict].join(" ").toLowerCase();
+    }
+
+    function schoolSearchMatches() {
+      const query = schoolSearchQuery.trim().toLowerCase();
+      const pool = filteredSchools();
+      if (!query) return pool;
+      const terms = query.split(/\s+/).filter(Boolean);
+      return pool.filter((school) => terms.every((term) => schoolSearchText(school).includes(term)));
+    }
+
+    function schoolCategoryTableConfig() {
+      if (activeCategory === "learners" || activeCategory === "enrolment") {
+        return {
+          title: "Learner data",
+          note: "Total learners plus grade-band distribution for the active school set.",
+          headers: ["School", "Learners", "G1–G6", "G7–G10", "G11–G12"],
+          row: (school) => {
+            const elementary = school.learnersByGrade.slice(0, 6).reduce((total, value) => total + value, 0);
+            const juniorHigh = school.learnersByGrade.slice(6, 10).reduce((total, value) => total + value, 0);
+            const seniorHigh = school.learnersByGrade.slice(10, 12).reduce((total, value) => total + value, 0);
+            return [school.name, num(school.learners), num(elementary), num(juniorHigh), num(seniorHigh)];
+          },
+        };
+      }
+      if (activeCategory === "teachers") {
+        return {
+          title: "Teacher data",
+          note: "Teacher totals and distribution by school level.",
+          headers: ["School", "Teachers", "Elem", "JHS", "SHS"],
+          row: (school) => [school.name, num(school.teachers), num(school.teacherBreakdown.elementary), num(school.teacherBreakdown.juniorHigh), num(school.teacherBreakdown.seniorHigh)],
+        };
+      }
+      if (activeCategory === "classrooms" || activeCategory === "classSize" || activeCategory === "modality") {
+        return {
+          title: "Classroom data",
+          note: "Room inventory and condition indicators for each visible school.",
+          headers: ["School", "Rooms", "Good", "Repair", "Demo"],
+          row: (school) => [school.name, num(school.classrooms), num(school.roomBreakdown.good), num(school.roomBreakdown.repair), num(school.roomBreakdown.demolition)],
+        };
+      }
+      if (activeCategory === "facilities" || activeCategory === "schoolResources") {
+        return {
+          title: activeCategory === "facilities" ? "Facilities data" : "Resource data",
+          note: "Proxy facility/resource indicators tied to room condition and utilization risk.",
+          headers: ["School", "Built", "Good", "Repair", "Overcap"],
+          row: (school) => [school.name, num(school.roomBreakdown.fullyBuilt), num(school.roomBreakdown.good), num(school.roomBreakdown.repair), school.overcapacity + "%"],
+        };
+      }
+      return {
+        title: "School data",
+        note: "Core school-level data for the active filter selection.",
+        headers: ["School", "Learners", "Teachers", "Rooms", "Load"],
+        row: (school) => [school.name, num(school.learners), num(school.teachers), num(school.classrooms), "1:" + school.load],
+      };
+    }
+
+    function schoolDataTable() {
+      const schools = schoolSearchMatches();
+      const allSchools = filteredSchools();
+      const config = schoolCategoryTableConfig();
+      const headerHtml = config.headers.map((header) => `<th>${header}</th>`).join("");
+      const rowsHtml = schools.map((school) => `<tr data-school-id="${school.id}">${config.row(school).map((value) => `<td title="${h(value)}">${h(value)}</td>`).join("")}</tr>`).join("");
+      return `<aside class="school-data-card" aria-label="School data table"><div class="school-data-head"><div><h3>${config.title}</h3><p>${config.note}</p></div><span class="school-data-count">${schools.length}/${allSchools.length}</span></div><div class="school-data-table-wrap"><table class="school-data-table"><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml}</tbody></table></div></aside>`;
+    }
+
+    function schoolMapCard() {
+      const schools = schoolSearchMatches();
+      const label = activeRegion === "all"
+        ? "all regions"
+        : activeMunicipality === "all"
+          ? activeRegion
+          : `${activeRegion} · ${activeMunicipality}`;
+      const searchControls = `<div class="school-search school-search-header" aria-label="School search for table and map"><div class="school-search-copy"><h3>Search schools</h3><p>Type a school name, region, division, or municipality below. The table and map update after you pause typing.</p></div><label class="school-search-box"><span>School search</span><input id="school-search-input" type="search" value="${h(schoolSearchQuery)}" placeholder="Search a school here..." autocomplete="off" autofocus></label></div>`;
+      return `<div class="school-map-wrap">${searchControls}${schoolDataTable()}<div class="school-map-panel"><div id="school-map" class="school-map" aria-label="Interactive Philippines school map"></div></div><div class="map-summary"><span><strong>${schools.length}</strong> sample schools shown for ${label}</span><span>Layers: Street · Satellite · Terrain</span></div></div>`;
+    }
+
+    function schoolMarkerColor(school) {
+      if (school.overcapacity >= 18 || school.load >= 34) return "#ce1126";
+      if (school.overcapacity >= 10 || school.load >= 30) return "#d97706";
+      return "#16a34a";
+    }
+
+    function schoolIcon(school) {
+      return L.divIcon({
+        className: "",
+        html: `<span class="school-marker" style="--marker-color:${schoolMarkerColor(school)}"></span>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+    }
+
+    function updateSchoolMarkers() {
+      if (!schoolMap || !schoolLayer || typeof L === "undefined") return;
+      const schools = schoolSearchMatches();
+      schoolLayer.clearLayers();
+      schoolMarkerIndex = {};
+      schools.forEach((school) => {
+        const tooltip = `<div class="school-tooltip"><strong>${school.name}</strong><br>${school.region} · ${school.municipality}<br>Learners: ${school.learners.toLocaleString()}<br>Teachers: ${school.teachers.toLocaleString()} · Rooms: ${school.classrooms.toLocaleString()}<br>Attendance: ${school.attendance}% · Overcapacity: ${school.overcapacity}% · Load 1:${school.load}<br><strong>Click for full school profile</strong></div>`;
+        const marker = L.marker([school.lat, school.lng], { icon: schoolIcon(school), title: school.name })
+          .bindTooltip(tooltip, { sticky: true, direction: "top", opacity: 0.96 })
+          .on("click", () => openSchoolModal(school))
+          .addTo(schoolLayer);
+        schoolMarkerIndex[school.id] = marker;
+      });
+      if (schools.length) {
+        const bounds = L.latLngBounds(schools.map((school) => [school.lat, school.lng]));
+        schoolMap.fitBounds(bounds.pad(0.16), {
+          maxZoom: activeMunicipality !== "all" ? 11 : activeRegion !== "all" ? 8 : 6,
+          animate: false,
+        });
+      } else {
+        schoolMap.setView([12.8797, 121.7740], 5);
+      }
+      window.setTimeout(() => schoolMap.invalidateSize(), 80);
+    }
+
+    function initSchoolMap() {
+      const el = document.getElementById("school-map");
+      if (!el) return;
+      if (typeof L === "undefined") {
+        el.innerHTML = '<div class="map-summary"><strong>Map unavailable:</strong> Leaflet could not load in this preview.</div>';
+        return;
+      }
+      if (!L._schoolTileLayerPatched) {
+        const rawTileLayer = L.tileLayer.bind(L);
+        L.tileLayer = (url, options) => rawTileLayer(
+          String(url).replace(/^\{\{https:\/\//, "https://").replace(/\}\}/, ""),
+          options
+        );
+        L._schoolTileLayerPatched = true;
+      }
+      if (schoolMap) {
+        schoolMap.remove();
+        schoolMap = null;
+        schoolLayer = null;
+      }
+      const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap contributors",
+      });
+      const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles © Esri",
+      });
+      const terrain = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        maxZoom: 17,
+        attribution: "© OpenTopoMap contributors",
+      });
+      schoolMap = L.map(el, {
+        layers: [street],
+        zoomControl: true,
+        scrollWheelZoom: false,
+      }).setView([12.8797, 121.7740], 5);
+      el.addEventListener("mouseenter", () => schoolMap.scrollWheelZoom.enable());
+      el.addEventListener("mouseleave", () => schoolMap.scrollWheelZoom.disable());
+      L.control.layers({ Street: street, Satellite: satellite, Terrain: terrain }, {}, { collapsed: false }).addTo(schoolMap);
+      schoolLayer = L.layerGroup().addTo(schoolMap);
+      updateSchoolMarkers();
+      document.querySelectorAll("[data-school-id]").forEach((row) => {
+        row.addEventListener("click", () => {
+          const school = schoolsData.find((item) => item.id === row.dataset.schoolId);
+          if (school) {
+            zoomToSchool(school.id);
+            openSchoolModal(school);
+          }
+        });
+      });
+      attachSchoolSearchListeners();
+    }
+
+    function zoomToSchool(schoolId) {
+      const school = schoolsData.find((item) => item.id === schoolId);
+      if (!school || !schoolMap) return;
+      schoolMap.setView([school.lat, school.lng], 14, { animate: true });
+      const marker = schoolMarkerIndex[school.id];
+      if (marker) window.setTimeout(() => marker.openTooltip(), 180);
+    }
+
+    function attachSchoolSearchListeners() {
+      const input = document.getElementById("school-search-input");
+      if (!input) return;
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.addEventListener("input", (event) => {
+        const nextQuery = event.target.value;
+        window.clearTimeout(schoolSearchDebounce);
+        schoolSearchDebounce = window.setTimeout(() => {
+          schoolSearchQuery = nextQuery;
+          renderCard("card-e");
+          window.requestAnimationFrame(() => {
+            const refreshedInput = document.getElementById("school-search-input");
+            if (!refreshedInput) return;
+            refreshedInput.focus({ preventScroll: true });
+            refreshedInput.setSelectionRange(refreshedInput.value.length, refreshedInput.value.length);
+          });
+        }, 700);
+      });
+    }
+
+    function num(value) {
+      return Number(value || 0).toLocaleString();
+    }
+
+    function openSchoolModal(school) {
+      const modal = document.getElementById("school-modal");
+      const title = document.getElementById("school-modal-title");
+      const subtitle = document.getElementById("school-modal-subtitle");
+      const body = document.getElementById("school-modal-body");
+      if (!modal || !title || !subtitle || !body) return;
+
+      const gradeCards = school.learnersByGrade.map((value, index) => `<div class="grade-pill">G${index + 1}<strong>${num(value)}</strong></div>`).join("");
+      const teacher = school.teacherBreakdown;
+      const rooms = school.roomBreakdown;
+
+      title.textContent = school.name;
+      subtitle.textContent = `${school.region} · ${school.division} · ${school.municipality}`;
+      body.innerHTML = `
+        <section class="school-info-card">
+          <h3>Basic details</h3>
+          <div class="modal-stat-grid">
+            <div class="modal-stat"><span>Region</span><strong>${school.region}</strong></div>
+            <div class="modal-stat"><span>Division</span><strong>${school.division}</strong></div>
+            <div class="modal-stat"><span>Municipality</span><strong>${school.municipality}</strong></div>
+            <div class="modal-stat"><span>Province</span><strong>${school.province}</strong></div>
+            <div class="modal-stat"><span>Legislative district</span><strong>${school.legislativeDistrict}</strong></div>
+            <div class="modal-stat"><span>School district</span><strong>${school.schoolDistrict}</strong></div>
+          </div>
+        </section>
+        <section class="school-info-card wide">
+          <h3>Learners by grade level</h3>
+          <div class="modal-stat-grid">
+            <div class="modal-stat"><span>Total learners</span><strong>${num(school.learners)}</strong></div>
+            <div class="modal-stat"><span>Attendance</span><strong>${school.attendance}%</strong></div>
+            <div class="modal-stat"><span>Teacher load</span><strong>1:${school.load}</strong></div>
+          </div>
+          <div class="grade-grid">${gradeCards}</div>
+        </section>
+        <section class="school-info-card">
+          <h3>Teachers</h3>
+          <div class="modal-stat-grid">
+            <div class="modal-stat"><span>Total teachers</span><strong>${num(school.teachers)}</strong></div>
+            <div class="modal-stat"><span>Elementary</span><strong>${num(teacher.elementary)}</strong></div>
+            <div class="modal-stat"><span>Junior high</span><strong>${num(teacher.juniorHigh)}</strong></div>
+            <div class="modal-stat"><span>Senior high</span><strong>${num(teacher.seniorHigh)}</strong></div>
+          </div>
+        </section>
+        <section class="school-info-card wide">
+          <h3>Rooms and condition</h3>
+          <div class="modal-stat-grid">
+            <div class="modal-stat"><span>Total classrooms</span><strong>${num(school.classrooms)}</strong></div>
+            <div class="modal-stat"><span>Good condition</span><strong>${num(rooms.good)}</strong></div>
+            <div class="modal-stat"><span>Needs repair</span><strong>${num(rooms.repair)}</strong></div>
+            <div class="modal-stat"><span>For demolition</span><strong>${num(rooms.demolition)}</strong></div>
+            <div class="modal-stat"><span>Fully built</span><strong>${num(rooms.fullyBuilt)}</strong></div>
+            <div class="modal-stat"><span>Overcapacity</span><strong>${school.overcapacity}%</strong></div>
+          </div>
+        </section>
+      `;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeSchoolModal() {
+      const modal = document.getElementById("school-modal");
+      if (!modal) return;
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    function quadrantChart(category) {
+      const rows = visibleRows();
+      const maxLearners = Math.max(...regions.map((row) => row.learners), 1);
+
+      return `
+        <div class="quadrant">
+          <span class="quadrant-label q-support">Low load · high room pressure</span>
+          <span class="quadrant-label q-priority">High load · high room pressure</span>
+          <span class="quadrant-label q-low">Balanced</span>
+          <span class="quadrant-label q-watch">High load watch</span>
+          <span class="quadrant-axis axis-x">Teacher load →</span>
+          <span class="quadrant-axis axis-y">Overcapacity →</span>
+          ${rows.map((row) => {
+            const x = Math.min(88, Math.max(12, ((row.load - 24) / 16) * 76 + 12));
+            const y = Math.min(86, Math.max(14, (row.overcapacity / 26) * 76 + 10));
+            const size = Math.round(24 + (row.learners / maxLearners) * 22);
+            const color = row.overcapacity > 18 ? "var(--red)" : row.load > 32 ? "var(--amber)" : "var(--green)";
+            return `<div class="bubble data-point" data-region="${row.name}" style="--x:${x}%;--y:${y}%;--size:${size}px;--color:${color}" title="${row.name}: 1:${row.load} load · ${row.overcapacity}% overcapacity">${row.name.replace("Region ", "R")}</div>`;
+          }).join("")}
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span><strong>Balanced</strong></span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--amber)"></span><strong>Load watch</strong></span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span><strong>Priority</strong></span>
+          <span class="legend-item"><strong>Bubble size</strong> Learners</span>
+        </div>
+      `;
+    }
+
+    function lineChart(category) {
+      const colors = category === "teachers" ? ["#16a34a"] : category === "classrooms" ? ["#d97706"] : category === "learners" ? ["#6d28d9"] : ["#6d28d9", "#16a34a", "#d97706"];
+
+      return `
+        <svg class="line-chart data-point" data-region="${activeRegion === "all" ? "Region IV-A" : activeRegion}" viewBox="0 0 420 185">
+          <line x1="25" y1="145" x2="395" y2="145" stroke="#e2e8f0"/>
+          <line x1="25" y1="100" x2="395" y2="100" stroke="#e2e8f0"/>
+          <line x1="25" y1="55" x2="395" y2="55" stroke="#e2e8f0"/>
+          ${colors.includes("#6d28d9") ? '<polyline points="30,124 105,108 180,94 255,82 330,68 390,54" fill="none" stroke="#6d28d9" stroke-width="4" stroke-linecap="round"/>' : ""}
+          ${colors.includes("#16a34a") ? '<polyline points="30,132 105,121 180,112 255,102 330,94 390,86" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>' : ""}
+          ${colors.includes("#d97706") ? '<polyline points="30,138 105,130 180,123 255,116 330,108 390,101" fill="none" stroke="#d97706" stroke-width="4" stroke-linecap="round"/>' : ""}
+          ${colors.includes("#6d28d9") ? '<text class="line-label" x="344" y="48">Learners 28.4M</text>' : ""}
+          ${colors.includes("#16a34a") ? '<text class="line-label" x="344" y="82">Teachers 923K</text>' : ""}
+          ${colors.includes("#d97706") ? '<text class="line-label" x="344" y="112">Rooms 684K</text>' : ""}
+        </svg>
+      `;
+    }
+
+    function multiLineChart() {
+      const rows = visibleRows();
+      const vars = lineVars.length ? lineVars : ["learners"];
+      const xFor = (index) => rows.length <= 1 ? 42 : 42 + (index / (rows.length - 1)) * 252;
+      const series = vars.map((key) => {
+        const values = rows.map((row) => corrVars[key].get(row));
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const span = (max - min) || 1;
+        const points = values.map((value, index) => `${xFor(index).toFixed(1)},${(180 - ((value - min) / span) * 144).toFixed(1)}`).join(" ");
+        const endX = xFor(values.length - 1);
+        const endY = 180 - ((values[values.length - 1] - min) / span) * 144;
+        return `<polyline points="${points}" fill="none" stroke="${varColors[key]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>${values.map((value, index) => `<circle cx="${xFor(index).toFixed(1)}" cy="${(180 - ((value - min) / span) * 144).toFixed(1)}" r="3.4" fill="${varColors[key]}"></circle>`).join("")}<text class="line-label" x="${Math.min(286, endX + 6).toFixed(1)}" y="${endY.toFixed(1)}">${corrVars[key].label}</text>`;
+      }).join("");
+      const labels = rows.map((row, index) => `<text x="${xFor(index).toFixed(1)}" y="204" text-anchor="end" transform="rotate(-35 ${xFor(index).toFixed(1)} 204)" fill="#64748b" font-size="7" font-weight="900">${row.name.replace("Region ", "R")}</text>`).join("");
+      const legend = vars.map((key) => `<span><span class="legend-swatch" style="background:${varColors[key]}"></span>${corrVars[key].label}</span>`).join("");
+      return `<div class="multi-line-wrap"><svg class="scatter-svg" viewBox="0 0 320 210" preserveAspectRatio="xMidYMid meet"><line x1="42" y1="180" x2="304" y2="180" class="axis-line"></line><line x1="42" y1="36" x2="42" y2="180" class="axis-line"></line><line x1="42" y1="132" x2="304" y2="132" stroke="#eef2f7"></line><line x1="42" y1="84" x2="304" y2="84" stroke="#eef2f7"></line>${series}${labels}</svg><div class="line-legend">${legend}</div></div>`;
+    }
+
+    function pearson(xs, ys) {
+      const n = xs.length;
+      if (n < 2) return 0;
+      const mx = xs.reduce((a, b) => a + b, 0) / n;
+      const my = ys.reduce((a, b) => a + b, 0) / n;
+      let num = 0, dx = 0, dy = 0;
+      for (let i = 0; i < n; i++) {
+        const a = xs[i] - mx;
+        const b = ys[i] - my;
+        num += a * b; dx += a * a; dy += b * b;
+      }
+      const den = Math.sqrt(dx * dy) || 1;
+      return num / den;
+    }
+
+    function corrStrengthLabel(r) {
+      const abs = Math.abs(r);
+      if (abs >= 0.7) return r >= 0 ? "Strong +" : "Strong −";
+      if (abs >= 0.4) return r >= 0 ? "Moderate +" : "Moderate −";
+      if (abs >= 0.2) return r >= 0 ? "Weak +" : "Weak −";
+      return "Negligible";
+    }
+
+    function scatterChart() {
+      const rows = visibleRows();
+      const xs = rows.map((r) => corrVars[corrX].get(r));
+      const ys = rows.map((r) => corrVars[corrY].get(r));
+      const useBubble = corrSize !== "none";
+      const ss = useBubble ? rows.map((r) => corrVars[corrSize].get(r)) : rows.map(() => 1);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const minS = Math.min(...ss), maxS = Math.max(...ss);
+      const spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1, spanS = (maxS - minS) || 1;
+      const dots = rows.map((row, i) => {
+        const px = 46 + ((xs[i] - minX) / spanX) * 252;
+        const py = 188 - ((ys[i] - minY) / spanY) * 166;
+        const rad = useBubble ? 5 + ((ss[i] - minS) / spanS) * 13 : 7;
+        const labelX = Math.min(294, Math.max(64, px + (i % 2 === 0 ? rad + 12 : -rad - 12)));
+        const labelY = Math.min(198, Math.max(18, py + ((i % 5) - 2) * 10));
+        const anchor = labelX > px ? "start" : "end";
+        return `<g class="bubble-dot data-point" data-region="${row.name}"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${rad.toFixed(1)}"></circle><line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${labelX.toFixed(1)}" y2="${labelY.toFixed(1)}" stroke="#cbd5e1" stroke-width="1"></line><text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}">${row.name.replace("Region ", "R")}</text></g>`;
+      }).join("");
+      return `<div class="scatter-wrap"><svg class="scatter-svg" viewBox="0 0 320 210" preserveAspectRatio="xMidYMid meet"><line x1="46" y1="188" x2="306" y2="188" class="axis-line"></line><line x1="46" y1="20" x2="46" y2="188" class="axis-line"></line><line x1="46" y1="132" x2="306" y2="132" stroke="#eef2f7"></line><line x1="132" y1="20" x2="132" y2="188" stroke="#eef2f7"></line>${dots}</svg><div class="scatter-axes"><span>${corrVars[corrX].label} →</span><span>↑ ${corrVars[corrY].label}${useBubble ? " · size " + corrVars[corrSize].label : ""}</span></div></div>`;
+    }
+
+    function descriptiveCorrelationChart() {
+      ensureDescCorrelationSelections();
+      const primary = primaryVarForCategory(activeCategory);
+      const rows = visibleRows();
+      const xs = rows.map((r) => corrVars[primary].get(r));
+      const ys = rows.map((r) => corrVars[descSecondary].get(r));
+      const useBubble = descBubble !== "none";
+      const ss = useBubble ? rows.map((r) => corrVars[descBubble].get(r)) : rows.map(() => 1);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const minS = Math.min(...ss), maxS = Math.max(...ss);
+      const spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1, spanS = (maxS - minS) || 1;
+      const dots = rows.map((row, i) => {
+        const px = 46 + ((xs[i] - minX) / spanX) * 252;
+        const py = 188 - ((ys[i] - minY) / spanY) * 166;
+        const rad = useBubble ? 5 + ((ss[i] - minS) / spanS) * 13 : 7;
+        const labelX = Math.min(294, Math.max(64, px + (i % 2 === 0 ? rad + 12 : -rad - 12)));
+        const labelY = Math.min(198, Math.max(18, py + ((i % 5) - 2) * 10));
+        const anchor = labelX > px ? "start" : "end";
+        return `<g class="bubble-dot data-point" data-region="${row.name}"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${rad.toFixed(1)}"></circle><line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${labelX.toFixed(1)}" y2="${labelY.toFixed(1)}" stroke="#cbd5e1" stroke-width="1"></line><text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}">${row.name.replace("Region ", "R")}</text></g>`;
+      }).join("");
+      const r = pearson(xs, ys);
+      const direction = r >= 0 ? "higher" : "lower";
+      const priorityHint = r >= 0 ? "upper-right" : "lower-right";
+      const bubbleText = useBubble ? ` Bubble size adds ${corrVars[descBubble].label.toLowerCase()}, so the largest bubbles show where the relationship has the greatest scale.` : "";
+      const corrInsight = `This map checks whether areas with higher ${corrVars[primary].label.toLowerCase()} also tend to have ${direction} ${corrVars[descSecondary].label.toLowerCase()}. The correlation is ${r.toFixed(2)} (${corrStrengthLabel(r).toLowerCase()}), so use the ${priorityHint} points as the main areas to investigate.${bubbleText}`;
+      return `<div class="scatter-wrap"><svg class="scatter-svg" viewBox="0 0 320 210" preserveAspectRatio="xMidYMid meet"><line x1="46" y1="188" x2="306" y2="188" class="axis-line"></line><line x1="46" y1="20" x2="46" y2="188" class="axis-line"></line><line x1="46" y1="132" x2="306" y2="132" stroke="#eef2f7"></line><line x1="132" y1="20" x2="132" y2="188" stroke="#eef2f7"></line>${dots}</svg><div class="scatter-axes"><span>${corrVars[primary].label} →</span><span>↑ ${corrVars[descSecondary].label}${useBubble ? " · size " + corrVars[descBubble].label : ""}</span></div><div class="chart-legend"><span class="legend-item"><strong>r</strong> ${r.toFixed(2)}</span><span class="legend-item"><strong>${corrStrengthLabel(r)}</strong></span></div><div class="analysis-note"><strong>Analysis:</strong> ${corrInsight}</div></div>`;
+    }
+
+    function bubbleChart() {
+      const rows = visibleRows();
+      const xs = rows.map((r) => corrVars[corrX].get(r));
+      const ys = rows.map((r) => corrVars[corrY].get(r));
+      const ss = rows.map((r) => corrVars[corrSize].get(r));
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const minS = Math.min(...ss), maxS = Math.max(...ss);
+      const spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1, spanS = (maxS - minS) || 1;
+      const dots = rows.map((row, i) => {
+        const px = 46 + ((xs[i] - minX) / spanX) * 252;
+        const py = 188 - ((ys[i] - minY) / spanY) * 166;
+        const rad = 7 + ((ss[i] - minS) / spanS) * 16;
+        const labelX = Math.min(294, Math.max(64, px + (i % 2 === 0 ? rad + 12 : -rad - 12)));
+        const labelY = Math.min(198, Math.max(18, py + ((i % 5) - 2) * 10));
+        const anchor = labelX > px ? "start" : "end";
+        return `<g class="bubble-dot data-point" data-region="${row.name}"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${rad.toFixed(1)}"></circle><line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${labelX.toFixed(1)}" y2="${labelY.toFixed(1)}" stroke="#cbd5e1" stroke-width="1"></line><text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}">${row.name.replace("Region ", "R")}</text></g>`;
+      }).join("");
+      return `<div class="scatter-wrap"><svg class="scatter-svg" viewBox="0 0 320 210" preserveAspectRatio="xMidYMid meet"><line x1="46" y1="188" x2="306" y2="188" class="axis-line"></line><line x1="46" y1="20" x2="46" y2="188" class="axis-line"></line>${dots}</svg><div class="scatter-axes"><span>${corrVars[corrX].label} →</span><span>↑ ${corrVars[corrY].label} · size ${corrVars[corrSize].label}</span></div></div>`;
+    }
+
+    function analysisTextForCard(cardId) {
+      const rowsForInsight = visibleRows();
+      const metricKey = primaryVarForCategory(activeCategory);
+      const metricLabel = corrVars[metricKey]?.label || categoryMeta[activeCategory]?.label || activeCategory;
+      const scopeLabel = activeMunicipality !== "all" ? activeMunicipality : activeRegion !== "all" ? `${activeRegion} municipalities` : "regions";
+      const formatInsightValue = (key, value) => {
+        if (key === "learners") return value.toFixed(activeRegion === "all" ? 1 : 2) + "M";
+        if (key === "teachers" || key === "classrooms") return Math.round(value) + "K";
+        if (key === "attendance" || key === "overcapacity") return Math.round(value) + "%";
+        if (key === "load") return "1:" + Math.round(value);
+        return Math.round(value).toLocaleString();
+      };
+      const metricValue = (row, key) => corrVars[key] ? corrVars[key].get(row) : row.learners;
+      const rankedBy = (key) => rowsForInsight.map((row) => ({ row, value: metricValue(row, key) })).sort((a, b) => b.value - a.value);
+      const splitRows = () => {
+        if (activeCategory === "learners") return [["Elementary", 52], ["Junior High", 31], ["Senior High", 17]];
+        if (activeCategory === "teachers") return [["Permanent", 78], ["Contract", 14], ["Substitute", 8]];
+        if (activeCategory === "classrooms") return [["Standard", 71], ["Laboratories", 8], ["Special", 21]];
+        const meta = categoryMeta[activeCategory];
+        if (!meta) return [["Learners", 50], ["Teachers", 30], ["Classrooms", 20]];
+        const total = meta.subs.reduce((sum, sub) => sum + sub[2], 0) || 1;
+        return meta.subs.map(([, name, value]) => [name, Math.round((value / total) * 100)]);
+      };
+      const pearson = (xKey, yKey) => {
+        const xs = rowsForInsight.map((row) => metricValue(row, xKey));
+        const ys = rowsForInsight.map((row) => metricValue(row, yKey));
+        const n = Math.max(rowsForInsight.length, 1);
+        const xMean = xs.reduce((sum, value) => sum + value, 0) / n;
+        const yMean = ys.reduce((sum, value) => sum + value, 0) / n;
+        const numerator = xs.reduce((sum, x, index) => sum + ((x - xMean) * (ys[index] - yMean)), 0);
+        const xDen = Math.sqrt(xs.reduce((sum, x) => sum + Math.pow(x - xMean, 2), 0));
+        const yDen = Math.sqrt(ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0));
+        return xDen && yDen ? numerator / (xDen * yDen) : 0;
+      };
+
+      if (!rowsForInsight.length) return "No records are currently visible for this filter selection.";
+      if (cardId === "card-e") return "";
+
+      if (cardId === "card-a") {
+        const ranked = rankedBy(metricKey);
+        const top = ranked[0];
+        const bottom = ranked[ranked.length - 1];
+        const gap = Math.max(0, top.value - bottom.value);
+        return `${top.row.name} currently leads ${metricLabel.toLowerCase()} at ${formatInsightValue(metricKey, top.value)}, while ${bottom.row.name} is lowest at ${formatInsightValue(metricKey, bottom.value)}. The spread is ${formatInsightValue(metricKey, gap)}, so the displayed ${scopeLabel} are ${gap > top.value * 0.35 ? "substantially uneven and should be prioritized by location" : "fairly close together"}.`;
+      }
+
+      if (cardId === "card-b") {
+        const splits = splitRows();
+        const largest = splits.reduce((best, item) => item[1] > best[1] ? item : best, splits[0]);
+        const smallest = splits.reduce((best, item) => item[1] < best[1] ? item : best, splits[0]);
+        return `${largest[0]} is the largest visible share at ${largest[1]}%, compared with ${smallest[0]} at ${smallest[1]}%. For the current ${scopeLabel} view, the mix is mainly driven by ${largest[0].toLowerCase()}, not evenly spread across all segments.`;
+      }
+
+      if (cardId === "card-c") {
+        const ordered = splitRows().slice().sort((a, b) => b[1] - a[1]);
+        const lead = ordered[0];
+        const second = ordered[1] || lead;
+        return `${lead[0]} has the highest displayed value (${lead[1]}%), followed by ${second[0]} (${second[1]}%). This indicates that the current distribution is concentrated in the leading segment rather than balanced across all categories.`;
+      }
+
+      if (cardId === "card-b-corr") {
+        const primary = primaryVarForCategory(activeCategory);
+        const secondary = descSecondary;
+        const r = pearson(primary, secondary);
+        const topPrimary = rankedBy(primary)[0];
+        const topSecondary = rankedBy(secondary)[0];
+        const direction = r >= 0.35 ? "positive" : r <= -0.35 ? "negative" : "weak";
+        return `${corrVars[primary].label} and ${corrVars[secondary].label.toLowerCase()} show a ${direction} relationship (r=${r.toFixed(2)}) across the current ${scopeLabel}. ${topPrimary.row.name} is highest on ${corrVars[primary].label.toLowerCase()} at ${formatInsightValue(primary, topPrimary.value)}, while ${topSecondary.row.name} is highest on ${corrVars[secondary].label.toLowerCase()} at ${formatInsightValue(secondary, topSecondary.value)}.`;
+      }
+
+      if (cardId === "card-c-box") {
+        const values = rowsForInsight.map((row) => ({ row, value: metricValue(row, metricKey) })).sort((a, b) => a.value - b.value);
+        const pick = (p) => values[Math.min(values.length - 1, Math.max(0, Math.round((values.length - 1) * p)))];
+        const min = values[0];
+        const q1 = pick(0.25);
+        const median = pick(0.5);
+        const q3 = pick(0.75);
+        const max = values[values.length - 1];
+        return `${max.row.name} is the upper end at ${formatInsightValue(metricKey, max.value)}, while ${min.row.name} is lowest at ${formatInsightValue(metricKey, min.value)}. The middle half runs from about ${formatInsightValue(metricKey, q1.value)} to ${formatInsightValue(metricKey, q3.value)}, with a median near ${formatInsightValue(metricKey, median.value)}.`;
+      }
+
+      if (cardId === "card-d") {
+        const pressure = rowsForInsight.slice().sort((a, b) => (b.overcapacity + b.load) - (a.overcapacity + a.load))[0];
+        const capacityLeader = rowsForInsight.slice().sort((a, b) => b.overcapacity - a.overcapacity)[0];
+        const loadLeader = rowsForInsight.slice().sort((a, b) => b.load - a.load)[0];
+        return `${pressure.name} is the strongest pressure point because its combined overcapacity (${pressure.overcapacity}%) and teacher load (1:${pressure.load}) are highest in the displayed set. ${capacityLeader.name} leads overcapacity at ${capacityLeader.overcapacity}%, while ${loadLeader.name} has the highest teacher load at 1:${loadLeader.load}.`;
+      }
+      const rows = visibleRows();
+      const selection = activeRegion === "all" ? "regions" : "municipalities";
+      const categoryLabel = categoryMeta[activeCategory]?.label || activeCategory;
+      if (cardId === "card-a") return `This comparison ranks ${selection} by the selected ${categoryLabel.toLowerCase()} profile. Longer bars show where the measure is larger, while the color segments show which sub-category is driving the total.`;
+      if (cardId === "card-b") return `This composition view explains the mix behind ${categoryLabel.toLowerCase()}. Larger slices identify the dominant segment, helping you see whether the current selection is balanced or concentrated in one area.`;
+      if (cardId === "card-c") return `This distribution chart compares the selected ${categoryLabel.toLowerCase()} segments side by side. Taller bars point to the largest contributor and help flag categories that may need follow-up.`;
+      if (cardId === "card-d") return `The heatmap highlights pressure patterns across ${selection}. Warmer cells mark possible risk areas, while green cells indicate comparatively healthier resource conditions.`;
+      if (cardId === "card-e") return `This map plots sample school locations across the Philippines. Hover over each school marker to review its learners, teachers, classrooms, attendance, overcapacity, and teacher-load profile. The markers automatically follow the active region and municipality filters.`;
+      if (cardId === "card-g") return `The scatterplot tests how two variables move together. Points far from the cluster are the best candidates for investigation because they may represent unusual operating conditions.`;
+      if (cardId === "card-i") return `The line chart normalizes multiple variables so their movement can be compared on one scale. Lines that rise or fall together suggest related patterns across the current ${selection}.`;
+      return `This card explains the current ${categoryLabel.toLowerCase()} pattern across ${rows.length} ${selection}. Use it to identify concentration, spread, and possible priority areas.`;
+    }
+
+    function renderCard(cardId) {
+      const card = document.querySelector(`[data-card="${cardId}"]`);
+      const stage = card.querySelector(".chart-stage");
+      const state = cardState[cardId];
+
+      stage.style.opacity = "0";
+      stage.style.transform = "translateY(6px)";
+
+      window.setTimeout(() => {
+        if (state.graph === "stacked") stage.innerHTML = stackedChart(state.category);
+        if (state.graph === "donut") stage.innerHTML = donutChart(state.category);
+        if (state.graph === "histogram") stage.innerHTML = histogramChart(state.category);
+        if (state.graph === "heatmap") stage.innerHTML = heatmapChart(state.category);
+        if (state.graph === "schoolMap") stage.innerHTML = schoolMapCard();
+        if (state.graph === "scatter") stage.innerHTML = scatterChart();
+        if (state.graph === "descCorrelation") stage.innerHTML = descriptiveCorrelationChart();
+        if (state.graph === "boxplot") stage.innerHTML = boxPlotChart(activeCategory);
+        if (state.graph === "multiline") stage.innerHTML = multiLineChart();
+        if (state.graph === "bubble") stage.innerHTML = bubbleChart();
+        if (state.graph === "line") stage.innerHTML = lineChart(state.category);
+        if (state.graph === "quadrant") stage.innerHTML = quadrantChart(state.category);
+        if (!stage.querySelector(".analysis-note")) {
+          const note = document.createElement("div");
+          note.className = "analysis-note";
+          note.innerHTML = `<strong>Analysis:</strong> ${analysisTextForCard(cardId)}`;
+          stage.appendChild(note);
+        }
+
+        stage.style.opacity = "1";
+        stage.style.transform = "translateY(0)";
+        attachDataPointListeners();
+        if (state.graph === "schoolMap") initSchoolMap();
+      }, 100);
+    }
+
+    function renderMunicipalityOptions() {
+      const select = document.getElementById("municipality-filter");
+      if (activeRegion === "all") {
+        select.innerHTML = '<option value="all">All Municipalities</option>';
+        select.value = "all";
+        select.disabled = true;
+        return;
+      }
+      const region = regions.find((row) => row.name === activeRegion);
+      const names = region ? (municipalitiesByRegion[region.name] || []) : [];
+      select.disabled = false;
+      select.innerHTML = '<option value="all">All Municipalities</option>' + names.map((name) => `<option value="${name}">${name}</option>`).join("");
+      select.value = activeMunicipality;
+    }
+
+    function subcategoryOptionsForCategory(category) {
+      const baseOptions = {
+        learners: ["Elementary", "Junior High", "Senior High"],
+        teachers: ["Permanent", "Contract", "Substitute"],
+        classrooms: ["Standard", "Laboratories", "Special", "Optimal", "Underused", "Overcapacity"],
+      };
+      if (baseOptions[category]) return baseOptions[category];
+      if (categoryMeta[category]) return categoryMeta[category].subs.map(([, name]) => name);
+      return [];
+    }
+
+    function renderSubcategoryOptions() {
+      const select = document.getElementById("subcategory-filter");
+      const options = subcategoryOptionsForCategory(activeCategory);
+      if (activeSubcategory && !options.includes(activeSubcategory)) activeSubcategory = null;
+      select.disabled = options.length === 0;
+      select.innerHTML = '<option value="">All Sub-categories</option>' + options.map((name) => `<option value="${name}">${name}</option>`).join("");
+      select.value = activeSubcategory || "";
+    }
+
+    function renderAll() {
+      const filterLabel = activeRegion === "all"
+        ? "All Regions"
+        : activeMunicipality === "all"
+          ? activeRegion
+          : activeRegion + " · " + activeMunicipality;
+      document.getElementById("active-filter-label").textContent = activeSubcategory ? filterLabel + " · " + activeSubcategory : filterLabel;
+      document.getElementById("region-filter").value = activeRegion;
+      document.getElementById("global-category-filter").value = activeCategory;
+      const hasActiveFilter = activeRegion !== "all" || activeMunicipality !== "all" || activeCategory !== "learners" || !!activeSubcategory;
+      const backFilter = document.getElementById("back-filter");
+      backFilter.disabled = !hasActiveFilter;
+      backFilter.textContent = activeSubcategory ? "← Back to category" : activeMunicipality !== "all" ? "← Back to region" : activeRegion !== "all" ? "← Back to all regions" : activeCategory !== "learners" ? "← Back to learners" : "← Back";
+      renderMunicipalityOptions();
+      renderSubcategoryOptions();
+      renderDescCorrSelectors();
+      document.getElementById("kpi-row").innerHTML = kpiTemplate();
+
+      Object.keys(cardState).forEach(renderCard);
+      updateCorrBadge();
+
+      document.querySelectorAll(".chart-card").forEach((card) => {
+        card.classList.toggle("selected-context", activeRegion !== "all");
+      });
+    }
+
+    function updateCorrBadge() {
+      const badge = document.getElementById("corr-r-badge");
+      if (!badge) return;
+      const rows = visibleRows();
+      const xs = rows.map((r) => corrVars[corrX].get(r));
+      const ys = rows.map((r) => corrVars[corrY].get(r));
+      const r = pearson(xs, ys);
+      badge.textContent = "r = " + r.toFixed(2) + " · " + corrStrengthLabel(r);
+    }
+
+    function handleDataPointClick(name) {
+      if (!name || name === "all") {
+        activeRegion = "all";
+        activeMunicipality = "all";
+        renderAll();
+        return;
+      }
+      if (regions.some((row) => row.name === name)) {
+        activeRegion = name;
+        activeMunicipality = "all";
+      } else {
+        activeMunicipality = name;
+      }
+      renderAll();
+    }
+
+    function handleSubPointClick(subName) {
+      if (!subName) return;
+      activeSubcategory = activeSubcategory === subName ? null : subName;
+      renderAll();
+    }
+
+    function attachDataPointListeners() {
+      document.querySelectorAll(".data-point").forEach((point) => {
+        point.onclick = () => handleDataPointClick(point.dataset.region || "all");
+      });
+      document.querySelectorAll(".sub-point").forEach((point) => {
+        point.onclick = (event) => {
+          event.stopPropagation();
+          handleSubPointClick(point.dataset.subcategory || "");
+        };
+      });
+    }
+
+    document.getElementById("global-category-filter").addEventListener("change", (event) => {
+      const selectedCategory = event.target.value;
+      activeCategory = selectedCategory;
+      activeSubcategory = null;
+
+      if (selectedCategory !== "overview") {
+        ["card-a", "card-b", "card-c"].forEach((cardId) => {
+          cardState[cardId].category = selectedCategory;
+        });
+      }
+
+      renderAll();
+    });
+
+    document.getElementById("subcategory-filter").addEventListener("change", (event) => {
+      activeSubcategory = event.target.value || null;
+      renderAll();
+    });
+
+    document.getElementById("region-filter").addEventListener("change", (event) => {
+      activeRegion = event.target.value;
+      activeMunicipality = "all";
+      renderAll();
+    });
+
+    document.getElementById("municipality-filter").addEventListener("change", (event) => {
+      activeMunicipality = event.target.value;
+      renderAll();
+    });
+
+    document.getElementById("reset-filter").addEventListener("click", () => {
+      activeRegion = "all";
+      activeMunicipality = "all";
+      activeCategory = "facilities";
+      activeSubcategory = null;
+      document.getElementById("global-category-filter").value = "facilities";
+      renderAll();
+    });
+
+    document.getElementById("back-filter").addEventListener("click", () => {
+      if (activeSubcategory) {
+        activeSubcategory = null;
+      } else if (activeMunicipality !== "all") {
+        activeMunicipality = "all";
+      } else if (activeRegion !== "all") {
+        activeRegion = "all";
+        activeMunicipality = "all";
+      } else if (activeCategory !== "facilities") {
+        activeCategory = "facilities";
+        document.getElementById("global-category-filter").value = "facilities";
+      }
+      renderAll();
+    });
+
+    document.querySelectorAll(".fs-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".chart-card");
+        if (!card) return;
+        if (!document.fullscreenElement) {
+          if (card.requestFullscreen) card.requestFullscreen();
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      });
+    });
+
+    function populateCorrSelect(select, selected, allowNone = false) {
+      select.innerHTML = (allowNone ? `<option value="none"${selected === "none" ? " selected" : ""}>None</option>` : "") + Object.keys(corrVars).map((key) => `<option value="${key}"${key === selected ? " selected" : ""}>${corrVars[key].label}</option>`).join("");
+    }
+
+    function setActiveTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tab));
+      document.getElementById("view-descriptive").classList.toggle("active", tab === "descriptive");
+      document.getElementById("view-correlation").classList.toggle("active", tab === "correlation");
+      if (tab === "correlation") {
+        renderCard("card-d");
+        updateCorrBadge();
+      }
+    }
+
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+    });
+
+    const jumpToMultivariate = document.getElementById("jump-to-multivariate");
+    if (jumpToMultivariate) {
+      jumpToMultivariate.addEventListener("click", () => {
+        document.getElementById("view-correlation").scrollIntoView({ behavior: "auto", block: "start" });
+      });
+    }
+
+    const corrXSelect = document.getElementById("corr-x");
+    const corrYSelect = document.getElementById("corr-y");
+    const corrSizeSelect = document.getElementById("corr-size");
+    if (corrXSelect && corrYSelect && corrSizeSelect) {
+      populateCorrSelect(corrXSelect, corrX);
+      populateCorrSelect(corrYSelect, corrY);
+      populateCorrSelect(corrSizeSelect, corrSize, true);
+      corrXSelect.addEventListener("change", (event) => { corrX = event.target.value; updateCorrBadge(); });
+      corrYSelect.addEventListener("change", (event) => { corrY = event.target.value; updateCorrBadge(); });
+      corrSizeSelect.addEventListener("change", (event) => { corrSize = event.target.value; });
+    }
+
+    const descSecondarySelect = document.getElementById("desc-secondary");
+    const descBubbleSelect = document.getElementById("desc-bubble");
+    descSecondarySelect.addEventListener("change", (event) => { descSecondary = event.target.value; renderCard("card-b-corr"); });
+    descBubbleSelect.addEventListener("change", (event) => { descBubble = event.target.value; renderCard("card-b-corr"); });
+
+    document.querySelectorAll("[data-line-var]").forEach((box) => {
+      box.addEventListener("change", () => {
+        const key = box.dataset.lineVar;
+        if (box.checked && !lineVars.includes(key)) lineVars.push(key);
+        if (!box.checked) lineVars = lineVars.filter((item) => item !== key);
+        if (!lineVars.length) {
+          box.checked = true;
+          lineVars = [key];
+        }
+        renderCard("card-i");
+      });
+    });
+
+    document.querySelectorAll("[data-heat-var]").forEach((box) => {
+      box.addEventListener("change", () => {
+        const key = box.dataset.heatVar;
+        if (box.checked && !heatVars.includes(key)) heatVars.push(key);
+        if (!box.checked) heatVars = heatVars.filter((item) => item !== key);
+        if (!heatVars.length) {
+          box.checked = true;
+          heatVars = [key];
+        }
+        updateHeatCount();
+        renderCard("card-d");
+      });
+    });
+
+    function updateHeatCount() {
+      const countEl = document.getElementById("heat-ms-count");
+      if (countEl) countEl.textContent = heatVars.length;
+    }
+
+    const heatMs = document.getElementById("heat-multiselect");
+    const heatMsToggle = document.getElementById("heat-ms-toggle");
+    const heatMsPanel = document.getElementById("heat-ms-panel");
+    if (heatMs && heatMsToggle && heatMsPanel) {
+      heatMsToggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        heatMsPanel.classList.toggle("open");
+      });
+      document.addEventListener("click", (event) => {
+        if (!heatMs.contains(event.target)) heatMsPanel.classList.remove("open");
+      });
+    }
+    updateHeatCount();
+
+    document.getElementById("school-modal-close")?.addEventListener("click", closeSchoolModal);
+    document.getElementById("school-modal")?.addEventListener("click", (event) => {
+      if (event.target.id === "school-modal") closeSchoolModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeSchoolModal();
+    });
+
+    renderAll();
+    const dashboardEl = document.querySelector(".dashboard");
+    if (dashboardEl) dashboardEl.scrollTo({ top: 0, behavior: "auto" });
+
+    function metricKeyForAnalysis(category) {
+      return primaryVarForCategory(category);
+    }
+
+    function metricValueForAnalysis(row, key) {
+      return corrVars[key] ? corrVars[key].get(row) : row.learners;
+    }
+
+    function formatMetricForAnalysis(key, value) {
+      if (key === "learners") return value.toFixed(activeRegion === "all" ? 1 : 2) + "M";
+      if (key === "teachers" || key === "classrooms") return Math.round(value) + "K";
+      if (key === "attendance" || key === "overcapacity") return Math.round(value) + "%";
+      if (key === "load") return "1:" + Math.round(value);
+      return Math.round(value).toLocaleString();
+    }
+
+    function analysisScopeLabel() {
+      if (activeMunicipality !== "all") return activeMunicipality;
+      if (activeRegion !== "all") return `${activeRegion} municipalities`;
+      return "regions";
+    }
+
+    function rankedMetricRowsForAnalysis(key) {
+      return visibleRows()
+        .map((row) => ({ row, value: metricValueForAnalysis(row, key) }))
+        .sort((a, b) => b.value - a.value);
+    }
+
+    function splitRowsForDynamicAnalysis(category) {
+      if (category === "learners") return [["Elementary", 52], ["Junior High", 31], ["Senior High", 17]];
+      if (category === "teachers") return [["Permanent", 78], ["Contract", 14], ["Substitute", 8]];
+      if (category === "classrooms") return [["Standard", 71], ["Laboratories", 8], ["Special", 21]];
+      const meta = categoryMeta[category];
+      if (!meta) return [["Learners", 50], ["Teachers", 30], ["Classrooms", 20]];
+      const total = meta.subs.reduce((sum, sub) => sum + sub[2], 0) || 1;
+      return meta.subs.map(([, name, value]) => [name, Math.round((value / total) * 100)]);
+    }
+
+    function pearsonForDynamicAnalysis(rows, xKey, yKey) {
+      const xs = rows.map((row) => metricValueForAnalysis(row, xKey));
+      const ys = rows.map((row) => metricValueForAnalysis(row, yKey));
+      const n = Math.max(rows.length, 1);
+      const xMean = xs.reduce((sum, value) => sum + value, 0) / n;
+      const yMean = ys.reduce((sum, value) => sum + value, 0) / n;
+      const numerator = xs.reduce((sum, x, index) => sum + ((x - xMean) * (ys[index] - yMean)), 0);
+      const xDen = Math.sqrt(xs.reduce((sum, x) => sum + Math.pow(x - xMean, 2), 0));
+      const yDen = Math.sqrt(ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0));
+      return xDen && yDen ? numerator / (xDen * yDen) : 0;
+    }
+
+    function dynamicAnalysisForCard(cardId) {
+      const rows = visibleRows();
+      if (!rows.length) return "No records are currently visible for this filter selection.";
+      const key = metricKeyForAnalysis(activeCategory);
+      const label = corrVars[key]?.label || categoryMeta[activeCategory]?.label || activeCategory;
+      const ranked = rankedMetricRowsForAnalysis(key);
+      const top = ranked[0];
+      const bottom = ranked[ranked.length - 1];
+      const gap = top && bottom ? top.value - bottom.value : 0;
+      const scope = analysisScopeLabel();
+
+      if (cardId === "card-a") {
+        return `${top.row.name} is highest for ${label.toLowerCase()} at ${formatMetricForAnalysis(key, top.value)}, while ${bottom.row.name} is lowest at ${formatMetricForAnalysis(key, bottom.value)}. The gap is ${formatMetricForAnalysis(key, gap)}, so the current ${scope} view is ${gap > (top.value * 0.35) ? "highly uneven and should be prioritized by location" : "relatively balanced"}.`;
+      }
+
+      if (cardId === "card-b") {
+        const splits = splitRowsForDynamicAnalysis(activeCategory);
+        const largest = splits.reduce((best, item) => item[1] > best[1] ? item : best, splits[0]);
+        const smallest = splits.reduce((best, item) => item[1] < best[1] ? item : best, splits[0]);
+        return `${largest[0]} is the dominant visible segment at ${largest[1]}%, compared with ${smallest[0]} at ${smallest[1]}%. In the current ${scope} selection, changes in ${largest[0].toLowerCase()} will move the displayed mix more than the smaller segments.`;
+      }
+
+      if (cardId === "card-c") {
+        const splits = splitRowsForDynamicAnalysis(activeCategory).slice().sort((a, b) => b[1] - a[1]);
+        const largest = splits[0];
+        const second = splits[1] || largest;
+        return `${largest[0]} has the largest displayed value (${largest[1]}%), followed by ${second[0]} (${second[1]}%). The chart is therefore concentrated in the leading segment rather than evenly distributed across all categories.`;
+      }
+
+      if (cardId === "card-b-corr") {
+        const primary = primaryVarForCategory(activeCategory);
+        const secondary = descSecondary;
+        const r = pearsonForDynamicAnalysis(rows, primary, secondary);
+        const byPrimary = rankedMetricRowsForAnalysis(primary);
+        const bySecondary = rankedMetricRowsForAnalysis(secondary);
+        const direction = r >= 0.35 ? "positive" : r <= -0.35 ? "negative" : "weak";
+        return `${corrVars[primary].label} and ${corrVars[secondary].label.toLowerCase()} show a ${direction} relationship (r=${r.toFixed(2)}) across the current ${scope}. ${byPrimary[0].row.name} leads on ${corrVars[primary].label.toLowerCase()} at ${formatMetricForAnalysis(primary, byPrimary[0].value)}, while ${bySecondary[0].row.name} is highest on ${corrVars[secondary].label.toLowerCase()} at ${formatMetricForAnalysis(secondary, bySecondary[0].value)}.`;
+      }
+
+      if (cardId === "card-c-box") {
+        const values = rows.map((row) => ({ row, value: metricValueForAnalysis(row, key) })).sort((a, b) => a.value - b.value);
+        const valueAt = (p) => values[Math.min(values.length - 1, Math.max(0, Math.round((values.length - 1) * p)))];
+        const min = values[0];
+        const q1 = valueAt(0.25);
+        const median = valueAt(0.5);
+        const q3 = valueAt(0.75);
+        const max = values[values.length - 1];
+        return `${max.row.name} is the upper end at ${formatMetricForAnalysis(key, max.value)}, while ${min.row.name} is lowest at ${formatMetricForAnalysis(key, min.value)}. The middle range runs from ${formatMetricForAnalysis(key, q1.value)} to ${formatMetricForAnalysis(key, q3.value)}, with a median near ${formatMetricForAnalysis(key, median.value)}.`;
+      }
+
+      if (cardId === "card-d") {
+        const pressure = rows.slice().sort((a, b) => (b.overcapacity + b.load) - (a.overcapacity + a.load))[0];
+        const capacityLeader = rows.slice().sort((a, b) => b.overcapacity - a.overcapacity)[0];
+        const loadLeader = rows.slice().sort((a, b) => b.load - a.load)[0];
+        return `${pressure.name} is the strongest pressure point because its combined overcapacity (${pressure.overcapacity}%) and teacher load (1:${pressure.load}) are highest in the displayed set. ${capacityLeader.name} leads overcapacity at ${capacityLeader.overcapacity}%, while ${loadLeader.name} has the highest teacher load at 1:${loadLeader.load}.`;
+      }
+
+      return "";
+    }
+
+    function applyDynamicAnalysis(cardId) {
+      const card = document.querySelector(`.chart-card[data-card="${cardId}"]`);
+      if (!card) return;
+      const note = card.querySelector(".analysis-note");
+      if (cardId === "card-e") {
+        if (note) note.remove();
+        return;
+      }
+      if (!note) return;
+      note.innerHTML = `<strong>Analysis:</strong> ${dynamicAnalysisForCard(cardId)}`;
+    }
+
+    if (typeof renderCard === "function") {
+      const originalRenderCardWithDynamicAnalysis = renderCard;
+      renderCard = function(cardId) {
+        originalRenderCardWithDynamicAnalysis(cardId);
+        applyDynamicAnalysis(cardId);
+      };
+    }
+
+    if (typeof renderAll === "function") {
+      const originalRenderAllWithDynamicAnalysis = renderAll;
+      renderAll = function() {
+        originalRenderAllWithDynamicAnalysis();
+        Object.keys(cardState).forEach(applyDynamicAnalysis);
+      };
+    }
+
+    Object.keys(cardState).forEach(applyDynamicAnalysis);
+    function formatInsightMetricValue(key, value) {
+      if (key === "learners") return value.toFixed(activeRegion === "all" ? 1 : 2) + "M";
+      if (key === "teachers" || key === "classrooms") return Math.round(value) + "K";
+      if (key === "attendance" || key === "overcapacity") return Math.round(value) + "%";
+      if (key === "load") return "1:" + Math.round(value);
+      return Math.round(value).toLocaleString();
+    }
+
+    function metricInsightValue(row, key) {
+      return corrVars[key] ? corrVars[key].get(row) : row.learners;
+    }
+
+    function rankedInsightRows(key) {
+      return visibleRows()
+        .map((row) => ({ row, value: metricInsightValue(row, key) }))
+        .sort((a, b) => b.value - a.value);
+    }
+
+    function currentInsightScope() {
+      if (activeMunicipality !== "all") return activeMunicipality;
+      if (activeRegion !== "all") return `${activeRegion} municipalities`;
+      return "regions";
+    }
+
+    function corrInsight(xKey, yKey) {
+      const rows = visibleRows();
+      const xs = rows.map((row) => metricInsightValue(row, xKey));
+      const ys = rows.map((row) => metricInsightValue(row, yKey));
+      const n = Math.max(rows.length, 1);
+      const xMean = xs.reduce((sum, value) => sum + value, 0) / n;
+      const yMean = ys.reduce((sum, value) => sum + value, 0) / n;
+      const numerator = xs.reduce((sum, x, index) => sum + ((x - xMean) * (ys[index] - yMean)), 0);
+      const xDen = Math.sqrt(xs.reduce((sum, x) => sum + Math.pow(x - xMean, 2), 0));
+      const yDen = Math.sqrt(ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0));
+      return xDen && yDen ? numerator / (xDen * yDen) : 0;
+    }
+
+    function splitInsightRows(category) {
+      if (category === "learners") return [["Elementary", 52], ["Junior High", 31], ["Senior High", 17]];
+      if (category === "teachers") return [["Permanent", 78], ["Contract", 14], ["Substitute", 8]];
+      if (category === "classrooms") return [["Standard", 71], ["Laboratories", 8], ["Special", 21]];
+      const meta = categoryMeta[category];
+      if (!meta) return [["Learners", 50], ["Teachers", 30], ["Classrooms", 20]];
+      const total = meta.subs.reduce((sum, sub) => sum + sub[2], 0) || 1;
+      return meta.subs.map(([, name, value]) => [name, Math.round((value / total) * 100)]);
+    }
+
+    function specificInsightForCard(cardId) {
+      const rows = visibleRows();
+      if (!rows.length) return "No records are currently visible for this filter selection.";
+      const scope = currentInsightScope();
+      const primary = primaryVarForCategory(activeCategory);
+      const primaryLabel = corrVars[primary]?.label || activeCategory;
+
+      if (cardId === "card-a") {
+        const ranked = rankedInsightRows(primary);
+        const top = ranked[0];
+        const bottom = ranked[ranked.length - 1];
+        const gap = Math.max(0, top.value - bottom.value);
+        return `${top.row.name} is the highest visible ${primaryLabel.toLowerCase()} area at ${formatInsightMetricValue(primary, top.value)}, while ${bottom.row.name} is lowest at ${formatInsightMetricValue(primary, bottom.value)}. The gap is ${formatInsightMetricValue(primary, gap)}, which means the current ${scope} view is ${gap > top.value * 0.35 ? "uneven enough to require location-specific planning" : "relatively compact with no extreme spread"}.`;
+      }
+
+      if (cardId === "card-b") {
+        const ordered = splitInsightRows(activeCategory).slice().sort((a, b) => b[1] - a[1]);
+        const lead = ordered[0];
+        const tail = ordered[ordered.length - 1];
+        return `${lead[0]} is the largest visible segment at ${lead[1]}%, while ${tail[0]} is smallest at ${tail[1]}%. This means the current ${scope} composition is mostly driven by ${lead[0].toLowerCase()}, so shifts in that segment will affect the total mix more than changes in ${tail[0].toLowerCase()}.`;
+      }
+
+      if (cardId === "card-c") {
+        const ordered = splitInsightRows(activeCategory).slice().sort((a, b) => b[1] - a[1]);
+        const lead = ordered[0];
+        const second = ordered[1] || lead;
+        const tail = ordered[ordered.length - 1];
+        return `${lead[0]} leads the displayed distribution at ${lead[1]}%, ahead of ${second[0]} at ${second[1]}%, while ${tail[0]} is lowest at ${tail[1]}%. The chart is therefore concentrated in the leading group rather than evenly distributed.`;
+      }
+
+      if (cardId === "card-b-corr") {
+        const secondary = descSecondary;
+        const r = corrInsight(primary, secondary);
+        const primaryRows = rankedInsightRows(primary);
+        const secondaryRows = rankedInsightRows(secondary);
+        const topPrimary = primaryRows[0];
+        const topSecondary = secondaryRows[0];
+        const lowSecondary = secondaryRows[secondaryRows.length - 1];
+        const direction = r >= 0.35 ? "strong positive" : r <= -0.35 ? "strong negative" : "weak";
+        return `${topPrimary.row.name} has the highest ${corrVars[primary].label.toLowerCase()} at ${formatInsightMetricValue(primary, topPrimary.value)}. ${topSecondary.row.name} has the highest ${corrVars[secondary].label.toLowerCase()} at ${formatInsightMetricValue(secondary, topSecondary.value)}, while ${lowSecondary.row.name} is lowest at ${formatInsightMetricValue(secondary, lowSecondary.value)}. The relationship is ${direction} (r=${r.toFixed(2)}), so investigate areas that pair high ${corrVars[primary].label.toLowerCase()} with high ${corrVars[secondary].label.toLowerCase()}.`;
+      }
+
+      if (cardId === "card-c-box") {
+        const values = rows
+          .map((row) => ({ row, value: metricInsightValue(row, primary) }))
+          .sort((a, b) => a.value - b.value);
+        const pick = (p) => values[Math.min(values.length - 1, Math.max(0, Math.round((values.length - 1) * p)))];
+        const low = values[0];
+        const q1 = pick(0.25);
+        const median = pick(0.5);
+        const q3 = pick(0.75);
+        const high = values[values.length - 1];
+        const iqr = Math.max(0, q3.value - q1.value);
+        return `${high.row.name} is the high end at ${formatInsightMetricValue(primary, high.value)}, while ${low.row.name} is the low end at ${formatInsightMetricValue(primary, low.value)}. The median is closest to ${median.row.name} at about ${formatInsightMetricValue(primary, median.value)}, and the middle half runs from ${formatInsightMetricValue(primary, q1.value)} to ${formatInsightMetricValue(primary, q3.value)} (IQR ${formatInsightMetricValue(primary, iqr)}).`;
+      }
+
+      if (cardId === "card-d") {
+        const pressure = rows.slice().sort((a, b) => (b.overcapacity + b.load) - (a.overcapacity + a.load))[0];
+        const capacityLeader = rows.slice().sort((a, b) => b.overcapacity - a.overcapacity)[0];
+        const loadLeader = rows.slice().sort((a, b) => b.load - a.load)[0];
+        return `${pressure.name} is the strongest combined pressure point because it pairs ${pressure.overcapacity}% overcapacity with teacher load of 1:${pressure.load}. ${capacityLeader.name} is highest on overcapacity (${capacityLeader.overcapacity}%), while ${loadLeader.name} is highest on teacher load (1:${loadLeader.load}), making these the clearest areas for follow-up.`;
+      }
+
+      return "";
+    }
+
+    function forceSpecificAnalysisNotes() {
+      Object.keys(cardState).forEach((cardId) => {
+        const card = document.querySelector(`.chart-card[data-card="${cardId}"]`);
+        if (!card) return;
+        const note = card.querySelector(".analysis-note");
+        if (cardId === "card-e") {
+          if (note) note.remove();
+          return;
+        }
+        if (!note) return;
+        const next = `<strong>Analysis:</strong> ${specificInsightForCard(cardId)}`;
+        if (note.innerHTML !== next) note.innerHTML = next;
+      });
+    }
+
+    let insightRefreshQueued = false;
+    function queueSpecificAnalysisRefresh() {
+      if (insightRefreshQueued) return;
+      insightRefreshQueued = true;
+      window.requestAnimationFrame(() => {
+        insightRefreshQueued = false;
+        forceSpecificAnalysisNotes();
+      });
+    }
+
+    forceSpecificAnalysisNotes();
+    window.setTimeout(forceSpecificAnalysisNotes, 50);
+    window.setTimeout(forceSpecificAnalysisNotes, 250);
+    new MutationObserver(queueSpecificAnalysisRefresh).observe(document.querySelector(".dashboard"), {
+      childList: true,
+      subtree: true,
+    });
+  </script>
+</body>
+</html>
