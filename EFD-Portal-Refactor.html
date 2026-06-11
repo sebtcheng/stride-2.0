@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InsightED Infrastructure Monitoring Dashboard</title>
+<style>
+  :root {
+    --navy:#08315f;
+    --blue:#075985;
+    --sky:#0284c7;
+    --soft:#e0f2fe;
+    --bg:#f0f9ff;
+    --card:#ffffff;
+    --text:#0f172a;
+    --muted:#64748b;
+    --line:#bae6fd;
+    --gold:#f59e0b;
+    --red:#dc2626;
+    --green:#16a34a;
+    --purple:#7c3aed;
+  }
+
+  * { box-sizing:border-box; }
+
+  body {
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:
+      radial-gradient(circle at 9% 10%, rgba(2,132,199,.18), transparent 30%),
+      radial-gradient(circle at 92% 8%, rgba(245,158,11,.20), transparent 30%),
+      radial-gradient(circle at 88% 88%, rgba(125,211,252,.18), transparent 32%),
+      var(--bg);
+    color:var(--text);
+  }
+
+  .wrap {
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:14px 16px 24px;
+  }
+
+  .hero {
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    color:white;
+    border-radius:18px;
+    padding:16px 20px;
+    border:2px solid color-mix(in srgb,var(--blue) 65%,var(--navy) 35%);
+    box-shadow:0 10px 24px rgba(8,49,95,.14);
+    overflow:hidden;
+    position:relative;
+  }
+
+  .hero::after {
+    content:"";
+    position:absolute;
+    right:-70px;
+    top:-80px;
+    width:240px;
+    height:240px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(251,191,36,.32), transparent 68%);
+  }
+
+  .hero small {
+    color:#fbbf24;
+    font-weight:950;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+
+  .hero h1 {
+    margin:0;
+    font-size:clamp(24px,3.2vw,36px);
+    line-height:1.08;
+    letter-spacing:-.035em;
+    position:relative;
+    z-index:1;
+  }
+
+  .hero p {
+    display:none;
+  }
+
+  .toolbar {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin:18px 0;
+  }
+
+  .search,
+  .select {
+    width:100%;
+    min-width:0;
+    background:white;
+    border:2px solid var(--line);
+    border-radius:14px;
+    padding:11px 12px;
+    font-size:12px;
+    font-weight:800;
+    color:var(--navy);
+    outline:none;
+  }
+
+  .search { flex:1; min-width:280px; }
+
+  .kpis {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-bottom:10px;
+  }
+
+  .card {
+    background:var(--card);
+    border:2px solid var(--line);
+    border-radius:18px;
+    padding:12px;
+    box-shadow:0 8px 20px rgba(8,49,95,.07);
+  }
+
+  .kpi {
+    border-left:8px solid var(--sky);
+  }
+
+  .kpi.gold { border-left-color:var(--gold); }
+  .kpi.red { border-left-color:var(--red); }
+  .kpi.green { border-left-color:var(--green); }
+
+  .kpi small,
+  .label {
+    display:block;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.13em;
+  }
+
+  .kpi h2 {
+    margin:5px 0 2px;
+    font-size:24px;
+    color:var(--navy);
+  }
+
+  .kpi p {
+    margin:0;
+    color:var(--muted);
+    font-size:11px;
+    line-height:1.3;
+  }
+
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .wide { grid-column:1 / -1; }
+
+  .section-title {
+    margin:0 0 12px;
+    color:var(--navy);
+    letter-spacing:-.02em;
+  }
+
+  .subtext {
+    margin-top:-6px;
+    margin-bottom:8px;
+    color:var(--muted);
+    line-height:1.35;
+    font-size:11px;
+  }
+
+  .bars {
+    display:grid;
+    gap:8px;
+  }
+
+  .bar-row {
+    display:grid;
+    grid-template-columns:120px 1fr 82px;
+    gap:10px;
+    align-items:center;
+    font-size:13px;
+    font-weight:850;
+  }
+
+  .region-row {
+    grid-template-columns:130px minmax(0,1fr) 70px;
+  }
+
+  .track {
+    height:16px;
+    background:var(--soft);
+    border-radius:999px;
+    overflow:hidden;
+  }
+
+  .fill {
+    height:100%;
+    background:linear-gradient(90deg,var(--blue),var(--sky));
+    border-radius:999px;
+  }
+
+  .fill.green { background:linear-gradient(90deg,#15803d,var(--green)); }
+  .fill.gold { background:linear-gradient(90deg,#d97706,var(--gold)); }
+  .fill.red { background:linear-gradient(90deg,#991b1b,var(--red)); }
+  .fill.purple { background:linear-gradient(90deg,#5b21b6,var(--purple)); }
+
+  .year-grid {
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:10px;
+  }
+
+  .year-card {
+    background:#f8fafc;
+    border:1px solid #dbeafe;
+    border-radius:18px;
+    padding:14px;
+  }
+
+  .year-card b {
+    display:block;
+    color:var(--navy);
+    font-size:22px;
+    margin:6px 0 2px;
+  }
+
+  .year-card span {
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:800;
+  }
+
+  .split-row {
+    display:grid;
+    grid-template-columns:130px 1fr 2px 1fr 82px;
+    gap:8px;
+    align-items:center;
+    font-size:13px;
+    font-weight:850;
+  }
+
+  .axis {
+    height:28px;
+    background:#0f172a;
+    opacity:.25;
+    border-radius:999px;
+  }
+
+  .left,
+  .right {
+    height:22px;
+    background:#e2e8f0;
+    border-radius:999px;
+    overflow:hidden;
+  }
+
+  .left .fill {
+    margin-left:auto;
+    background:linear-gradient(90deg,var(--red),var(--gold));
+  }
+
+  .right .fill {
+    background:linear-gradient(90deg,var(--blue),var(--green));
+  }
+
+  .goal-cards {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+
+  .goal h3 {
+    margin:8px 0 10px;
+    color:var(--navy);
+  }
+
+  .bullet {
+    position:relative;
+    height:18px;
+    background:var(--soft);
+    border-radius:999px;
+    overflow:hidden;
+    margin-bottom:8px;
+  }
+
+  .target {
+    position:absolute;
+    top:-5px;
+    bottom:-5px;
+    width:4px;
+    background:#fbbf24;
+    left:100%;
+    transform:translateX(-2px);
+  }
+
+  .goal-meta {
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:850;
+  }
+
+  table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+
+  th,
+  td {
+    padding:12px;
+    border-bottom:1px solid #e2e8f0;
+    text-align:left;
+  }
+
+  th {
+    color:var(--muted);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+  }
+
+  .badge {
+    display:inline-block;
+    border-radius:999px;
+    padding:7px 10px;
+    font-size:11px;
+    font-weight:950;
+    text-transform:uppercase;
+  }
+
+  .ok { background:#dcfce7; color:#166534; }
+  .warn { background:#fef3c7; color:#92400e; }
+  .risk { background:#fee2e2; color:#991b1b; }
+  .info { background:#dbeafe; color:#1e40af; }
+
+  .note {
+    background:#eff6ff;
+    border-left:7px solid var(--sky);
+  }
+
+  @media(max-width:950px) {
+    .kpis,
+    .grid,
+    .goal-cards,
+    .year-grid {
+      grid-template-columns:1fr;
+    }
+
+    .split-row,
+    .bar-row,
+    .region-row {
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>InsightED Infrastructure Monitoring Dashboard</h1>
+  </section>
+
+  <section class="card" aria-label="Dashboard filters" style="margin:10px 0;">
+    <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.15fr) minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1fr) 72px; gap:8px; align-items:end;">
+      <label style="display:grid; gap:6px; min-width:0;">
+        <span style="color:#64748b; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Region</span>
+        <select id="dashboardRegionFilter" class="select">
+          <option value="all">All 17 Regions</option>
+          <option value="region4a">Region IV-A</option>
+          <option value="region3">Region III</option>
+          <option value="ncr">NCR</option>
+          <option value="region7">Region VII</option>
+          <option value="barmm">BARMM</option>
+        </select>
+      </label>
+
+      <label style="display:grid; gap:6px; min-width:0;">
+        <span style="color:#64748b; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Funding Year</span>
+        <select id="dashboardFundingYearFilter" class="select">
+          <option value="all">Funding Years 2022–2026</option>
+          <option value="fy2022">FY 2022</option>
+          <option value="fy2023">FY 2023</option>
+          <option value="fy2024">FY 2024</option>
+          <option value="fy2025">FY 2025</option>
+          <option value="fy2026">FY 2026</option>
+        </select>
+      </label>
+
+      <label style="display:grid; gap:6px; min-width:0;">
+        <span style="color:#64748b; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Project Type</span>
+        <select id="dashboardProjectTypeFilter" class="select">
+          <option value="all">All Project Types</option>
+          <option value="newConstruction">New Construction</option>
+          <option value="repair">Repair</option>
+          <option value="rehab">Rehabilitation</option>
+          <option value="completion">Completion</option>
+          <option value="siteDev">Site Development</option>
+        </select>
+      </label>
+
+      <label style="display:grid; gap:6px; min-width:0;">
+        <span style="color:#64748b; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Implementing Agency</span>
+        <select id="dashboardAgencyFilter" class="select">
+          <option value="all">All Agencies</option>
+          <option value="dpwh">DPWH</option>
+          <option value="deped">DEPED</option>
+          <option value="pgo">PGO</option>
+          <option value="cgo">CGO</option>
+          <option value="mgo">MGO</option>
+        </select>
+      </label>
+
+      <label style="display:grid; gap:6px; min-width:0;">
+        <span style="color:#64748b; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Distribution by</span>
+        <select id="knowledgeDistributionBy" class="select">
+          <option value="fundingYear">Funding Year</option>
+          <option value="agency">Implementing Agency</option>
+          <option value="projectType">Project Type</option>
+          <option value="region">Region</option>
+        </select>
+      </label>
+
+      <label style="display:grid; gap:6px; min-width:0;">
+        <span style="color:#64748b; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Unit</span>
+        <select id="knowledgeUnitBy" class="select">
+          <option value="budget">Budget</option>
+          <option value="projects">Total Projects</option>
+          <option value="sites">Number of Sites</option>
+          <option value="classrooms">Number of Classrooms</option>
+          <option value="storeys">Number of Storeys</option>
+        </select>
+      </label>
+
+      <button id="clearDashboardFilters" type="button" style="height:43px; min-width:0; border:0; border-radius:14px; background:#08315f; color:white; font-size:12px; font-weight:950; letter-spacing:.02em; cursor:pointer; box-shadow:0 8px 18px rgba(8,49,95,.18);">
+        Clear
+      </button>
+    </div>
+  </section>
+
+  <!-- Knowledge layer: portfolio statistics -->
+  <section class="kpis">
+    <article class="card kpi green">
+      <small>Total Construction Projects</small>
+      <h2 id="kpiTotalProjects">12,381</h2>
+      <p id="kpiTotalProjectsNote">Portfolio count across all regions and funding years.</p>
+    </article>
+    <article class="card kpi">
+      <small>Total Approved Funds</small>
+      <h2 id="kpiTotalFunds">₱9.84B</h2>
+      <p id="kpiTotalFundsNote">Estimated total allocation across the national project portfolio.</p>
+    </article>
+    <article class="card kpi gold">
+      <small>Projects Needing Updates</small>
+      <h2 id="kpiNeedsUpdates">3,214</h2>
+      <p id="kpiNeedsUpdatesNote">Project records without fresh engineer progress reports.</p>
+    </article>
+    <article class="card kpi red">
+      <small>2026 Update Gap</small>
+      <h2 id="kpiUpdateGap">812</h2>
+      <p id="kpiUpdateGapNote">2026-funded projects still not updated for the month-end goal.</p>
+    </article>
+  </section>
+
+  <section class="grid">
+
+    <!-- Knowledge dashboard: dynamic stacked funds and projects by region -->
+    <article class="card wide">
+      <h2 class="section-title" id="stackedChartTitle">Knowledge: Regional Funds Stacked by Funding Year</h2>
+      <p class="subtext" id="stackedChartSubtitle">
+        Shows each region’s total approved funds, with each regional bar stacked by funding year.
+      </p>
+
+      <div id="stackedLegend" style="display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px;"></div>
+
+      <div class="bars" id="regionalStackedChart">
+        <!-- Regional stacked bars render here -->
+      </div>
+    </article>
+
+    <!-- Knowledge dashboard: histogram with actual percentage line -->
+    <article class="card">
+      <h2 class="section-title" id="paretoChartTitle">Knowledge: Budget Histogram by Funding Year</h2>
+      <p class="subtext" id="paretoChartSubtitle">
+        Histogram bars show total budget by selected grouping. The gold line shows the actual percentage share of the national budget for each bar, not cumulative percentage.
+      </p>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px;">
+        <span id="unitBarsChip" style="background:#dbeafe; color:#1e40af; border-radius:999px; padding:7px 10px; font-size:11px; font-weight:950;">Columns: total budget amount</span>
+        <span style="background:#dcfce7; color:#166534; border-radius:999px; padding:7px 10px; font-size:11px; font-weight:950;">Standard histogram</span>
+      </div>
+
+      <div id="regularParetoChart" style="display:grid; gap:14px;">
+        <!-- Histogram with actual percentage line renders here -->
+      </div>
+
+      <p class="subtext" id="knowledgeReadingGuide">
+        Reading guide: the histogram columns show the selected unit per group, using column height for direct comparison.
+      </p>
+    </article>
+
+    <!-- Knowledge dashboard: reactive donut composition -->
+    <article class="card">
+      <h2 class="section-title" id="donutChartTitle">Knowledge: Budget Share Donut by Funding Year</h2>
+      <p class="subtext" id="donutChartSubtitle">
+        Donut slices show the selected unit’s share across the selected distribution category.
+      </p>
+
+      <div id="knowledgeDonutWrap" style="display:grid; grid-template-columns:minmax(220px,.85fr) minmax(280px,1.15fr); gap:12px; align-items:center; min-height:280px;">
+        <div id="knowledgeDonutChart" style="width:240px; height:240px; border-radius:50%; margin:auto; display:grid; place-items:center;"></div>
+        <div id="knowledgeDonutTable"></div>
+      </div>
+      <p class="subtext" id="knowledgeDonutGuide">
+        The donut reacts to both selectors. The table shows the matching value and share for each slice.
+      </p>
+
+      <script>
+        const knowledgeTotalBudget = 9.84;
+        const knowledgeTotalProjects = 12381;
+        const knowledgeUnitTotals = {
+          budget: 9.84,
+          projects: 12381,
+          sites: 8642,
+          classrooms: 49280,
+          storeys: 37145
+        };
+
+        const knowledgeDistributionData = {
+          fundingYear: {
+            label: "Funding Year",
+            stackedTitle: "Knowledge: Regional Funds Stacked by Funding Year",
+            stackedSubtitle: "Shows each region’s total approved funds, with each regional bar stacked by funding year.",
+            histogramTitle: "Knowledge: Budget Histogram by Funding Year",
+            histogramSubtitle: "Bars show total budget by funding year. The line shows each funding year’s actual percentage share of the national budget.",
+            groups: [
+              { label: "FY 2022", color: "#075985" },
+              { label: "FY 2023", color: "#0284c7" },
+              { label: "FY 2024", color: "#38bdf8" },
+              { label: "FY 2025", color: "#f59e0b" },
+              { label: "FY 2026", color: "#16a34a" }
+            ],
+            histogramRows: [
+              { label: "FY 2022", amount: 1.08, projects: "1,486 projects", color: "#075985" },
+              { label: "FY 2023", amount: 1.73, projects: "2,214 projects", color: "#0284c7" },
+              { label: "FY 2024", amount: 2.31, projects: "2,958 projects", color: "#38bdf8" },
+              { label: "FY 2025", amount: 2.48, projects: "3,104 projects", color: "#f59e0b" },
+              { label: "FY 2026", amount: 2.24, projects: "2,619 projects", color: "#16a34a" }
+            ],
+            regionalRows: [
+              { region: "Region IV-A", total: 1.02, projects: "1,284 projects", values: [0.09, 0.17, 0.24, 0.28, 0.24] },
+              { region: "Region III", total: 0.95, projects: "1,112 projects", values: [0.10, 0.18, 0.22, 0.25, 0.20] },
+              { region: "NCR", total: 0.82, projects: "894 projects", values: [0.08, 0.14, 0.19, 0.23, 0.18] },
+              { region: "Region VII", total: 0.74, projects: "923 projects", values: [0.09, 0.13, 0.17, 0.19, 0.16] },
+              { region: "BARMM", total: 0.65, projects: "806 projects", values: [0.07, 0.11, 0.15, 0.17, 0.15] }
+            ]
+          },
+          agency: {
+            label: "Implementing Agency",
+            stackedTitle: "Knowledge: Regional Funds Stacked by Implementing Agency",
+            stackedSubtitle: "Shows each region’s total approved funds, with each regional bar stacked by implementing agency.",
+            histogramTitle: "Knowledge: Budget Histogram by Implementing Agency",
+            histogramSubtitle: "Bars show total budget by agency. The line shows each agency’s actual percentage share of the national budget.",
+            groups: [
+              { label: "DPWH", color: "#075985" },
+              { label: "DEPED", color: "#16a34a" },
+              { label: "PGO", color: "#f59e0b" },
+              { label: "CGO", color: "#7c3aed" },
+              { label: "MGO", color: "#dc2626" }
+            ],
+            histogramRows: [
+              { label: "DPWH", amount: 4.12, projects: "4,920 projects", color: "#075985" },
+              { label: "DEPED", amount: 2.96, projects: "3,840 projects", color: "#16a34a" },
+              { label: "PGO", amount: 1.62, projects: "1,680 projects", color: "#f59e0b" },
+              { label: "CGO", amount: 0.74, projects: "1,090 projects", color: "#7c3aed" },
+              { label: "MGO", amount: 0.40, projects: "851 projects", color: "#dc2626" }
+            ],
+            regionalRows: [
+              { region: "Region IV-A", total: 1.02, projects: "1,284 projects", values: [0.43, 0.29, 0.16, 0.09, 0.05] },
+              { region: "Region III", total: 0.95, projects: "1,112 projects", values: [0.39, 0.31, 0.13, 0.07, 0.05] },
+              { region: "NCR", total: 0.82, projects: "894 projects", values: [0.31, 0.27, 0.10, 0.10, 0.04] },
+              { region: "Region VII", total: 0.74, projects: "923 projects", values: [0.30, 0.22, 0.12, 0.06, 0.04] },
+              { region: "BARMM", total: 0.65, projects: "806 projects", values: [0.24, 0.20, 0.11, 0.06, 0.04] }
+            ]
+          },
+          projectType: {
+            label: "Project Type",
+            stackedTitle: "Knowledge: Regional Funds Stacked by Project Type",
+            stackedSubtitle: "Shows each region’s total approved funds, with each regional bar stacked by project type.",
+            histogramTitle: "Knowledge: Budget Histogram by Project Type",
+            histogramSubtitle: "Bars show budget by construction category. The line shows each category’s actual percentage share of the national budget.",
+            groups: [
+              { label: "New Construction", color: "#075985" },
+              { label: "Repair", color: "#0284c7" },
+              { label: "Rehab", color: "#16a34a" },
+              { label: "Completion", color: "#f59e0b" },
+              { label: "Site Dev.", color: "#7c3aed" }
+            ],
+            histogramRows: [
+              { label: "New Construction", amount: 4.58, projects: "4,980 projects", color: "#075985" },
+              { label: "Repair", amount: 1.86, projects: "2,710 projects", color: "#0284c7" },
+              { label: "Rehab", amount: 1.54, projects: "2,104 projects", color: "#16a34a" },
+              { label: "Completion", amount: 1.08, projects: "1,420 projects", color: "#f59e0b" },
+              { label: "Site Dev.", amount: 0.78, projects: "1,167 projects", color: "#7c3aed" }
+            ],
+            regionalRows: [
+              { region: "Region IV-A", total: 1.02, projects: "1,284 projects", values: [0.48, 0.20, 0.15, 0.11, 0.08] },
+              { region: "Region III", total: 0.95, projects: "1,112 projects", values: [0.44, 0.19, 0.14, 0.10, 0.08] },
+              { region: "NCR", total: 0.82, projects: "894 projects", values: [0.36, 0.16, 0.13, 0.09, 0.08] },
+              { region: "Region VII", total: 0.74, projects: "923 projects", values: [0.33, 0.14, 0.12, 0.09, 0.06] },
+              { region: "BARMM", total: 0.65, projects: "806 projects", values: [0.29, 0.12, 0.11, 0.08, 0.05] }
+            ]
+          },
+          region: {
+            label: "Region",
+            stackedTitle: "Knowledge: Regional Funds by Region",
+            stackedSubtitle: "Since Region is selected, each row displays the region total as a single segment for direct regional comparison.",
+            histogramTitle: "Knowledge: Budget Histogram by Region",
+            histogramSubtitle: "Bars show total budget by region. The line shows each region’s actual percentage share of the national budget.",
+            groups: [
+              { label: "Region total", color: "#075985" }
+            ],
+            histogramRows: [
+              { label: "Region IV-A", amount: 1.02, projects: "1,284 projects", color: "#075985" },
+              { label: "Region III", amount: 0.95, projects: "1,112 projects", color: "#0284c7" },
+              { label: "NCR", amount: 0.82, projects: "894 projects", color: "#38bdf8" },
+              { label: "Region VII", amount: 0.74, projects: "923 projects", color: "#f59e0b" },
+              { label: "BARMM", amount: 0.65, projects: "806 projects", color: "#dc2626" }
+            ],
+            regionalRows: [
+              { region: "Region IV-A", total: 1.02, projects: "1,284 projects", values: [1.02] },
+              { region: "Region III", total: 0.95, projects: "1,112 projects", values: [0.95] },
+              { region: "NCR", total: 0.82, projects: "894 projects", values: [0.82] },
+              { region: "Region VII", total: 0.74, projects: "923 projects", values: [0.74] },
+              { region: "BARMM", total: 0.65, projects: "806 projects", values: [0.65] }
+            ]
+          }
+        };
+
+        function knowledgePesoLabel(amount) {
+          return amount >= 1 ? "₱" + amount.toFixed(2) + "B" : "₱" + Math.round(amount * 1000) + "M";
+        }
+
+        function knowledgeProjectCount(projectText) {
+          return Number(projectText.replace(/[^\d]/g, ""));
+        }
+
+        function knowledgeProjectLabel(value) {
+          return Math.round(value).toLocaleString() + " projects";
+        }
+
+        function knowledgeUnitLabel(value, unitKey) {
+          if (unitKey === "budget") return knowledgePesoLabel(value);
+          return Math.round(value).toLocaleString();
+        }
+
+        function knowledgeUnitName(unitKey) {
+          const names = {
+            budget: "budget",
+            projects: "project count",
+            sites: "site count",
+            classrooms: "classroom count",
+            storeys: "storey count"
+          };
+          return names[unitKey];
+        }
+
+        function knowledgeUnitTitle(unitKey) {
+          const names = {
+            budget: "Budget",
+            projects: "Project Count",
+            sites: "Number of Sites",
+            classrooms: "Number of Classrooms",
+            storeys: "Number of Storeys"
+          };
+          return names[unitKey];
+        }
+
+        function knowledgeUnitTotalLabel(unitKey) {
+          if (unitKey === "budget") return "₱9.84B budget";
+          return knowledgeUnitTotals[unitKey].toLocaleString() + " " + knowledgeUnitName(unitKey);
+        }
+
+        function knowledgeDerivedCountFromProjects(projectCount, unitKey) {
+          if (unitKey === "projects") return projectCount;
+          if (unitKey === "sites") return projectCount * (knowledgeUnitTotals.sites / knowledgeTotalProjects);
+          if (unitKey === "classrooms") return projectCount * (knowledgeUnitTotals.classrooms / knowledgeTotalProjects);
+          if (unitKey === "storeys") return projectCount * (knowledgeUnitTotals.storeys / knowledgeTotalProjects);
+          return projectCount;
+        }
+
+        function knowledgeUnitDistributionModifier(label, unitKey, groupKey) {
+          if (unitKey === "budget" || unitKey === "projects") return 1;
+
+          const modifiers = {
+            fundingYear: {
+              sites: { "FY 2022": .92, "FY 2023": 1.08, "FY 2024": .96, "FY 2025": 1.14, "FY 2026": .88 },
+              classrooms: { "FY 2022": .84, "FY 2023": .94, "FY 2024": 1.18, "FY 2025": 1.06, "FY 2026": 1.22 },
+              storeys: { "FY 2022": .78, "FY 2023": 1.02, "FY 2024": 1.10, "FY 2025": .96, "FY 2026": 1.28 }
+            },
+            agency: {
+              sites: { DPWH: 1.12, DEPED: .92, PGO: 1.04, CGO: .84, MGO: 1.24 },
+              classrooms: { DPWH: .88, DEPED: 1.22, PGO: .96, CGO: 1.08, MGO: .82 },
+              storeys: { DPWH: 1.18, DEPED: .86, PGO: 1.06, CGO: .92, MGO: 1.14 }
+            },
+            projectType: {
+              sites: { "New Construction": 1.20, Repair: .74, Rehab: .92, Completion: .86, "Site Dev.": 1.34 },
+              classrooms: { "New Construction": 1.28, Repair: .62, Rehab: 1.08, Completion: .82, "Site Dev.": .58 },
+              storeys: { "New Construction": 1.34, Repair: .70, Rehab: .96, Completion: 1.12, "Site Dev.": .66 }
+            },
+            region: {
+              sites: { "Region IV-A": 1.12, "Region III": 1.04, NCR: .76, "Region VII": 1.18, BARMM: .92 },
+              classrooms: { "Region IV-A": 1.18, "Region III": 1.08, NCR: .84, "Region VII": .96, BARMM: 1.22 },
+              storeys: { "Region IV-A": 1.10, "Region III": .94, NCR: 1.28, "Region VII": .86, BARMM: 1.04 }
+            }
+          };
+
+          return (modifiers[groupKey] && modifiers[groupKey][unitKey] && modifiers[groupKey][unitKey][label]) || 1;
+        }
+
+        function knowledgeHistogramValue(row, unitKey) {
+          if (unitKey === "budget") return row.amount;
+          return knowledgeDerivedCountFromProjects(knowledgeProjectCount(row.projects), unitKey) * knowledgeUnitDistributionModifier(row.label, unitKey, document.getElementById("knowledgeDistributionBy").value);
+        }
+
+        function knowledgeRegionalValue(row, unitKey) {
+          if (unitKey === "budget") return row.total;
+          return knowledgeDerivedCountFromProjects(knowledgeProjectCount(row.projects), unitKey) * knowledgeUnitDistributionModifier(row.region, unitKey, "region");
+        }
+
+        function knowledgeText(parent, tagName, text, style) {
+          const el = document.createElement(tagName);
+          el.textContent = text;
+          if (style) el.setAttribute("style", style);
+          parent.appendChild(el);
+          return el;
+        }
+
+        function renderStackedRegionalChart(groupKey, unitKey) {
+          const data = knowledgeDistributionData[groupKey];
+          const legend = document.getElementById("stackedLegend");
+          const chart = document.getElementById("regionalStackedChart");
+          const unitTitle = unitKey === "budget" ? "Funds" : knowledgeUnitTitle(unitKey);
+          const unitDescription = knowledgeUnitName(unitKey);
+          const visibleGroups = getVisibleKnowledgeGroups(groupKey);
+          const visibleRows = getVisibleRegionalRows(groupKey);
+          const scale = getKnowledgeScale(groupKey);
+          const regionalTotals = visibleRows.map(row => {
+            return knowledgeVisibleRegionalValue(row, groupKey, unitKey) * scale;
+          });
+          let maxRegionalTotal = regionalTotals.length ? Math.max(...regionalTotals) : 1;
+          if (maxRegionalTotal <= 0) maxRegionalTotal = 1;
+
+          document.getElementById("stackedChartTitle").textContent = "Knowledge: Regional " + unitTitle + " Stacked by " + data.label;
+          document.getElementById("stackedChartSubtitle").textContent = "Shows each selected region’s total " + unitDescription + ", filtered by Region, Funding Year, and Reporting Status.";
+          legend.replaceChildren();
+          chart.replaceChildren();
+
+          visibleGroups.forEach(group => {
+            const item = document.createElement("span");
+            item.setAttribute("style", "display:inline-flex; align-items:center; gap:6px; background:#f8fafc; border:1px solid #dbeafe; border-radius:999px; padding:7px 10px; font-size:11px; font-weight:900;");
+            const dot = document.createElement("i");
+            dot.setAttribute("style", "width:9px; height:9px; border-radius:999px; background:" + group.color + "; display:inline-block;");
+            item.appendChild(dot);
+            item.appendChild(document.createTextNode(group.label));
+            legend.appendChild(item);
+          });
+
+          visibleRows.forEach(row => {
+            const rowEl = document.createElement("div");
+            const selectedRegionMode = visibleRows.length === 1 && getDashboardFilterState().regionKey !== "all";
+            rowEl.setAttribute("class", "bar-row region-row");
+            if (selectedRegionMode) {
+              rowEl.setAttribute("style", "grid-template-columns:130px minmax(0,1fr) 90px; align-items:center;");
+            }
+
+            const visibleValues = getVisibleRegionalSegments(row, groupKey, unitKey);
+            const unitValue = knowledgeVisibleRegionalValue(row, groupKey, unitKey) * scale;
+            knowledgeText(rowEl, "span", row.region, "");
+            const track = document.createElement("div");
+            const outerWidth = Math.max((unitValue / maxRegionalTotal) * 100, 16);
+            const trackHeight = selectedRegionMode ? 52 : 18;
+            const segmentFontSize = selectedRegionMode ? 12 : 9;
+            track.setAttribute("class", "track");
+            track.setAttribute("style", "display:flex; height:" + trackHeight + "px; width:" + outerWidth + "%; border-radius:" + (selectedRegionMode ? "18px" : "999px") + ";");
+
+            const rowSum = visibleValues.reduce((sum, value) => sum + value, 0);
+            visibleValues.forEach((value, index) => {
+              const segment = document.createElement("div");
+              const width = rowSum > 0 ? (value / rowSum) * 100 : 0;
+              const segmentValue = unitKey === "budget" ? value * scale : (width / 100) * unitValue;
+              segment.setAttribute("style", "width:" + width + "%; background:" + visibleGroups[index].color + "; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden; color:white; font-size:" + segmentFontSize + "px; font-weight:950; line-height:1; text-shadow:0 1px 2px rgba(0,0,0,.35); white-space:nowrap;");
+              segment.textContent = knowledgeUnitLabel(segmentValue, unitKey);
+              track.appendChild(segment);
+            });
+
+            knowledgeText(rowEl, "b", knowledgeUnitLabel(unitValue, unitKey), "");
+            rowEl.insertBefore(track, rowEl.children[1]);
+            chart.appendChild(rowEl);
+          });
+        }
+
+        function renderKnowledgeDonut(groupKey, unitKey) {
+          const data = knowledgeDistributionData[groupKey];
+          const rows = getVisibleHistogramRows(groupKey);
+          const unitDisplayName = knowledgeUnitTitle(unitKey);
+          const scale = getKnowledgeScale(groupKey);
+          const values = rows.map(row => knowledgeHistogramValue(row, unitKey) * scale);
+          const unitTotal = values.reduce((sum, value) => sum + value, 0);
+          const donut = document.getElementById("knowledgeDonutChart");
+          const tableWrap = document.getElementById("knowledgeDonutTable");
+
+          document.getElementById("donutChartTitle").textContent = "Knowledge: " + unitDisplayName + " Share Donut by " + data.label;
+          document.getElementById("donutChartSubtitle").textContent = "Donut slices show the filtered " + knowledgeUnitName(unitKey) + " share across the selected " + data.label.toLowerCase() + " groups.";
+          document.getElementById("knowledgeDonutGuide").textContent = "The donut now reacts to Region, Funding Year, Reporting Status, Distribution by, and Unit filters.";
+          donut.replaceChildren();
+          tableWrap.replaceChildren();
+
+          let startPct = 0;
+          const slices = rows.map((row, index) => {
+            const pct = unitTotal > 0 ? (values[index] / unitTotal) * 100 : 0;
+            const slice = { row, value: values[index], pct, start: startPct, end: startPct + pct };
+            startPct += pct;
+            return slice;
+          });
+
+          const gradientStops = slices.map(slice => {
+            return slice.row.color + " " + slice.start.toFixed(2) + "% " + slice.end.toFixed(2) + "%";
+          });
+
+          donut.setAttribute("style", "width:240px; height:240px; border-radius:50%; margin:auto; display:grid; place-items:center; background:conic-gradient(" + gradientStops.join(", ") + "); box-shadow:inset 0 0 0 46px white, 0 12px 24px rgba(8,49,95,.12);");
+
+          const center = document.createElement("div");
+          center.setAttribute("style", "width:116px; height:116px; border-radius:999px; background:white; display:grid; place-items:center; text-align:center; color:#08315f; font-weight:950; box-shadow:0 0 0 1px #e0f2fe;");
+          center.textContent = knowledgeUnitLabel(unitTotal, unitKey);
+          donut.appendChild(center);
+
+          const table = document.createElement("table");
+          table.setAttribute("style", "width:100%; border-collapse:collapse; font-size:12px;");
+          const header = document.createElement("tr");
+          ["Category", "Value", "Share"].forEach(text => {
+            const th = document.createElement("th");
+            th.textContent = text;
+            th.setAttribute("style", "padding:10px 8px; border-bottom:1px solid #dbeafe; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.12em; text-align:left;");
+            header.appendChild(th);
+          });
+          table.appendChild(header);
+
+          slices.forEach(slice => {
+            const tr = document.createElement("tr");
+
+            const category = document.createElement("td");
+            category.setAttribute("style", "padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:950; color:#08315f;");
+            const dot = document.createElement("span");
+            dot.setAttribute("style", "display:inline-block; width:10px; height:10px; border-radius:999px; background:" + slice.row.color + "; margin-right:7px;");
+            category.appendChild(dot);
+            category.appendChild(document.createTextNode(slice.row.label));
+
+            const value = document.createElement("td");
+            value.textContent = knowledgeUnitLabel(slice.value, unitKey);
+            value.setAttribute("style", "padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:900;");
+
+            const share = document.createElement("td");
+            share.textContent = slice.pct.toFixed(1) + "%";
+            share.setAttribute("style", "padding:10px 8px; border-bottom:1px solid #e2e8f0; color:#d97706; font-weight:950;");
+
+            tr.appendChild(category);
+            tr.appendChild(value);
+            tr.appendChild(share);
+            table.appendChild(tr);
+          });
+
+          tableWrap.appendChild(table);
+        }
+
+        function renderBudgetHistogram(groupKey, unitKey) {
+          const data = knowledgeDistributionData[groupKey];
+          const chart = document.getElementById("regularParetoChart");
+          const unitDisplayName = knowledgeUnitTitle(unitKey);
+          const scale = getKnowledgeScale(groupKey);
+
+          document.getElementById("paretoChartTitle").textContent = "Knowledge: Standard " + unitDisplayName + " Histogram by " + data.label;
+          document.getElementById("paretoChartSubtitle").textContent = "Columns show filtered " + knowledgeUnitName(unitKey) + " by " + data.label.toLowerCase() + " for direct side-by-side comparison.";
+          document.getElementById("unitBarsChip").textContent = "Columns: total " + knowledgeUnitName(unitKey);
+          document.getElementById("knowledgeReadingGuide").textContent = "Reading guide: the histogram columns now respond to Region, Funding Year, Reporting Status, Distribution by, and Unit filters.";
+          chart.replaceChildren();
+
+          const rows = getVisibleHistogramRows(groupKey);
+          const rowValues = rows.map(row => knowledgeHistogramValue(row, unitKey) * scale);
+          let maxValue = rowValues.length ? Math.max(...rowValues) : 1;
+          if (maxValue <= 0) maxValue = 1;
+
+          const chartShell = document.createElement("div");
+          chartShell.setAttribute("style", "position:relative; height:300px; padding:24px 8px 56px; border-left:2px solid #dbeafe; border-bottom:2px solid #dbeafe; background:linear-gradient(to top,#f8fafc 1px,transparent 1px) 0 0/100% 20%;");
+
+          const bars = document.createElement("div");
+          bars.setAttribute("style", "height:100%; display:grid; grid-template-columns:repeat(" + rows.length + ",1fr); gap:12px; align-items:end;");
+
+          rows.forEach((rowData, index) => {
+            const unitValue = rowValues[index];
+            const barPct = (unitValue / maxValue) * 100;
+
+            const col = document.createElement("div");
+            col.setAttribute("style", "display:grid; grid-template-rows:1fr auto; gap:8px; height:100%;");
+
+            const barArea = document.createElement("div");
+            barArea.setAttribute("style", "height:100%; display:flex; align-items:flex-end; justify-content:center;");
+
+            const barWrap = document.createElement("div");
+            barWrap.setAttribute("style", "height:" + barPct + "%; width:100%; display:flex; flex-direction:column; justify-content:flex-end; gap:6px;");
+
+            const valueLabel = document.createElement("div");
+            valueLabel.setAttribute("style", "text-align:center; color:#08315f; font-size:12px; font-weight:950;");
+            valueLabel.textContent = knowledgeUnitLabel(unitValue, unitKey);
+
+            const bar = document.createElement("div");
+            bar.setAttribute("style", "height:calc(100% - 22px); min-height:18px; background:" + rowData.color + "; border-radius:16px 16px 6px 6px;");
+
+            const label = document.createElement("div");
+            label.setAttribute("style", "text-align:center;");
+            knowledgeText(label, "b", rowData.label, "display:block; color:#08315f; font-size:12px;");
+            knowledgeText(label, "span", unitKey === "budget" ? rowData.projects : knowledgeUnitName(unitKey), "display:block; color:#64748b; font-size:11px;");
+
+            barWrap.appendChild(valueLabel);
+            barWrap.appendChild(bar);
+            barArea.appendChild(barWrap);
+            col.appendChild(barArea);
+            col.appendChild(label);
+            bars.appendChild(col);
+          });
+
+          chartShell.appendChild(bars);
+
+          const note = document.createElement("p");
+          note.setAttribute("class", "subtext");
+          note.textContent = "This is a standard histogram: columns compare the filtered selected unit across the selected distribution category.";
+
+          chart.appendChild(chartShell);
+          chart.appendChild(note);
+        }
+
+        function renderKnowledgeDistribution() {
+          const groupKey = document.getElementById("knowledgeDistributionBy").value;
+          const unitKey = document.getElementById("knowledgeUnitBy").value;
+          renderStackedRegionalChart(groupKey, unitKey);
+          renderBudgetHistogram(groupKey, unitKey);
+          renderKnowledgeDonut(groupKey, unitKey);
+        }
+
+        const dashboardFilterData = {
+          regions: {
+            all: { label: "all regions", factor: 1 },
+            region4a: { label: "Region IV-A", factor: 0.104 },
+            region3: { label: "Region III", factor: 0.090 },
+            ncr: { label: "NCR", factor: 0.072 },
+            region7: { label: "Region VII", factor: 0.075 },
+            barmm: { label: "BARMM", factor: 0.065 }
+          },
+          years: {
+            all: { label: "all funding years", factor: 1, gapFactor: 1 },
+            fy2022: { label: "FY 2022", factor: 0.120, gapFactor: 0 },
+            fy2023: { label: "FY 2023", factor: 0.179, gapFactor: 0 },
+            fy2024: { label: "FY 2024", factor: 0.239, gapFactor: 0 },
+            fy2025: { label: "FY 2025", factor: 0.251, gapFactor: 0 },
+            fy2026: { label: "FY 2026", factor: 0.211, gapFactor: 1 }
+          },
+          projectTypes: {
+            all: { label: "all project types", factor: 1 },
+            newConstruction: { label: "New Construction", factor: 0.402 },
+            repair: { label: "Repair", factor: 0.219 },
+            rehab: { label: "Rehabilitation", factor: 0.170 },
+            completion: { label: "Completion", factor: 0.115 },
+            siteDev: { label: "Site Development", factor: 0.094 }
+          },
+          agencies: {
+            all: { label: "all implementing agencies", factor: 1 },
+            dpwh: { label: "DPWH", factor: 0.397 },
+            deped: { label: "DEPED", factor: 0.310 },
+            pgo: { label: "PGO", factor: 0.136 },
+            cgo: { label: "CGO", factor: 0.088 },
+            mgo: { label: "MGO", factor: 0.069 }
+          }
+        };
+
+        function getDashboardFilterState() {
+          const regionKey = document.getElementById("dashboardRegionFilter").value;
+          const yearKey = document.getElementById("dashboardFundingYearFilter").value;
+          const projectTypeKey = document.getElementById("dashboardProjectTypeFilter").value;
+          const agencyKey = document.getElementById("dashboardAgencyFilter").value;
+          return {
+            regionKey,
+            yearKey,
+            projectTypeKey,
+            agencyKey,
+            region: dashboardFilterData.regions[regionKey],
+            year: dashboardFilterData.years[yearKey],
+            projectType: dashboardFilterData.projectTypes[projectTypeKey],
+            agency: dashboardFilterData.agencies[agencyKey]
+          };
+        }
+
+        function getKnowledgeScale(groupKey) {
+          const state = getDashboardFilterState();
+          let scale = 1;
+
+          if (!(groupKey === "projectType" && state.projectTypeKey !== "all")) {
+            scale *= state.projectType.factor;
+          }
+
+          if (!(groupKey === "agency" && state.agencyKey !== "all")) {
+            scale *= state.agency.factor;
+          }
+
+          return scale;
+        }
+
+        function getYearGroupModifier(groupKey, index) {
+          const yearKey = getDashboardFilterState().yearKey;
+          const modifiers = {
+            agency: {
+              fy2022: [1.18, .84, .94, .78, .72],
+              fy2023: [1.05, .96, 1.14, .86, .80],
+              fy2024: [.94, 1.12, .96, 1.08, .90],
+              fy2025: [.88, 1.06, 1.02, 1.22, 1.04],
+              fy2026: [.82, 1.18, .94, 1.10, 1.28]
+            },
+            projectType: {
+              fy2022: [.82, 1.20, 1.10, .92, .78],
+              fy2023: [.88, 1.12, 1.04, 1.16, .86],
+              fy2024: [1.02, .98, 1.18, .92, 1.06],
+              fy2025: [1.14, .92, .96, 1.06, 1.18],
+              fy2026: [1.22, .84, .90, 1.02, 1.26]
+            },
+            region: {
+              fy2022: [.86, 1.08, .96, 1.12, .92],
+              fy2023: [1.10, .94, 1.04, .88, 1.08],
+              fy2024: [1.02, 1.12, .92, 1.04, .96],
+              fy2025: [1.16, .98, 1.08, .94, .90],
+              fy2026: [.96, 1.04, 1.12, 1.08, 1.18]
+            }
+          };
+
+          if (yearKey === "all" || groupKey === "fundingYear") return 1;
+          return (modifiers[groupKey] && modifiers[groupKey][yearKey] && modifiers[groupKey][yearKey][index]) || 1;
+        }
+
+        function adjustRowsForFundingYear(rows, groupKey) {
+          const state = getDashboardFilterState();
+          if (state.yearKey === "all" || groupKey === "fundingYear") return rows;
+
+          const baseAmounts = rows.map(row => row.amount);
+          const baseProjects = rows.map(row => knowledgeProjectCount(row.projects));
+          const adjustedAmounts = baseAmounts.map((amount, index) => amount * getYearGroupModifier(groupKey, index));
+          const adjustedProjects = baseProjects.map((projects, index) => projects * getYearGroupModifier(groupKey, index));
+          const baseAmountTotal = baseAmounts.reduce((sum, value) => sum + value, 0);
+          const baseProjectTotal = baseProjects.reduce((sum, value) => sum + value, 0);
+          const adjustedAmountTotal = adjustedAmounts.reduce((sum, value) => sum + value, 0);
+          const adjustedProjectTotal = adjustedProjects.reduce((sum, value) => sum + value, 0);
+          const targetAmountTotal = baseAmountTotal * state.year.factor;
+          const targetProjectTotal = baseProjectTotal * state.year.factor;
+
+          return rows.map((row, index) => {
+            const amount = adjustedAmountTotal > 0 ? (adjustedAmounts[index] / adjustedAmountTotal) * targetAmountTotal : 0;
+            const projects = adjustedProjectTotal > 0 ? (adjustedProjects[index] / adjustedProjectTotal) * targetProjectTotal : 0;
+            return {
+              label: row.label,
+              amount,
+              projects: Math.round(projects).toLocaleString() + " projects",
+              color: row.color
+            };
+          });
+        }
+
+        function getVisibleRegionalRows(groupKey) {
+          const state = getDashboardFilterState();
+          const rows = knowledgeDistributionData[groupKey].regionalRows;
+          if (state.regionKey === "all") return rows;
+          return rows.filter(row => row.region === state.region.label);
+        }
+
+        function getVisibleHistogramRows(groupKey) {
+          const state = getDashboardFilterState();
+          const data = knowledgeDistributionData[groupKey];
+          let rows = data.histogramRows;
+
+          if (state.regionKey !== "all" && groupKey !== "region") {
+            const regionalRow = data.regionalRows.find(row => row.region === state.region.label);
+            if (regionalRow) {
+              const rowTotalProjects = knowledgeProjectCount(regionalRow.projects);
+              const rowSum = regionalRow.values.reduce((sum, value) => sum + value, 0);
+              rows = data.groups.map((group, index) => {
+                const amount = regionalRow.values[index];
+                const projectShare = rowSum > 0 ? amount / rowSum : 0;
+                return {
+                  label: group.label,
+                  amount,
+                  projects: Math.round(rowTotalProjects * projectShare).toLocaleString() + " projects",
+                  color: group.color
+                };
+              });
+            }
+          }
+
+          rows = adjustRowsForFundingYear(rows, groupKey);
+
+          if (groupKey === "fundingYear" && state.yearKey !== "all") {
+            return rows.filter(row => row.label === state.year.label);
+          }
+
+          if (groupKey === "agency" && state.agencyKey !== "all") {
+            return rows.filter(row => row.label === state.agency.label);
+          }
+
+          if (groupKey === "projectType" && state.projectTypeKey !== "all") {
+            return rows.filter(row => {
+              return row.label === state.projectType.label || (state.projectTypeKey === "rehab" && row.label === "Rehab") || (state.projectTypeKey === "siteDev" && row.label === "Site Dev.");
+            });
+          }
+
+          if (groupKey === "region" && state.regionKey !== "all") {
+            return rows.filter(row => row.label === state.region.label);
+          }
+
+          return rows;
+        }
+
+        function getVisibleKnowledgeGroups(groupKey) {
+          const state = getDashboardFilterState();
+          const groups = knowledgeDistributionData[groupKey].groups;
+
+          if (groupKey === "fundingYear" && state.yearKey !== "all") {
+            return groups.filter(group => group.label === state.year.label);
+          }
+
+          if (groupKey === "agency" && state.agencyKey !== "all") {
+            return groups.filter(group => group.label === state.agency.label);
+          }
+
+          if (groupKey === "projectType" && state.projectTypeKey !== "all") {
+            return groups.filter(group => {
+              return group.label === state.projectType.label || (state.projectTypeKey === "rehab" && group.label === "Rehab") || (state.projectTypeKey === "siteDev" && group.label === "Site Dev.");
+            });
+          }
+
+          return groups;
+        }
+
+        function getVisibleRegionalSegments(row, groupKey, unitKey) {
+          const state = getDashboardFilterState();
+          const groups = knowledgeDistributionData[groupKey].groups;
+          let values = row.values;
+
+          if (state.yearKey !== "all") {
+            if (groupKey === "fundingYear") {
+              const index = groups.findIndex(group => group.label === state.year.label);
+              return index >= 0 ? [values[index]] : values;
+            }
+
+            const baseValues = values;
+            const adjustedValues = baseValues.map((value, index) => value * getYearGroupModifier(groupKey, index));
+            const baseTotal = baseValues.reduce((sum, value) => sum + value, 0);
+            const adjustedTotal = adjustedValues.reduce((sum, value) => sum + value, 0);
+            const targetTotal = baseTotal * state.year.factor;
+            values = adjustedValues.map(value => adjustedTotal > 0 ? (value / adjustedTotal) * targetTotal : 0);
+          }
+
+          if (unitKey !== "budget" && groupKey !== "region") {
+            values = values.map((value, index) => value * knowledgeUnitDistributionModifier(groups[index].label, unitKey, groupKey));
+          }
+
+          if (groupKey === "agency" && state.agencyKey !== "all") {
+            const index = groups.findIndex(group => group.label === state.agency.label);
+            return index >= 0 ? [values[index]] : values;
+          }
+
+          if (groupKey === "projectType" && state.projectTypeKey !== "all") {
+            const index = groups.findIndex(group => {
+              return group.label === state.projectType.label || (state.projectTypeKey === "rehab" && group.label === "Rehab") || (state.projectTypeKey === "siteDev" && group.label === "Site Dev.");
+            });
+            return index >= 0 ? [values[index]] : values;
+          }
+
+          return values;
+        }
+
+        function knowledgeVisibleRegionalValue(row, groupKey, unitKey) {
+          const visibleValues = getVisibleRegionalSegments(row, groupKey, unitKey);
+          const fullTotal = knowledgeRegionalValue(row, unitKey);
+
+          if (getDashboardFilterState().yearKey !== "all" || unitKey !== "budget") {
+            if (unitKey === "budget") return visibleValues.reduce((sum, value) => sum + value, 0);
+            const fullRowSum = row.values.reduce((sum, value) => sum + value, 0);
+            const visibleShare = fullRowSum > 0 ? visibleValues.reduce((sum, value) => sum + value, 0) / fullRowSum : 0;
+            return fullTotal * visibleShare;
+          }
+
+          return fullTotal;
+        }
+
+        function dashboardPesoLabel(amount) {
+          return amount >= 1 ? "₱" + amount.toFixed(2) + "B" : "₱" + Math.round(amount * 1000) + "M";
+        }
+
+        function renderDashboardFilters() {
+          const regionKey = document.getElementById("dashboardRegionFilter").value;
+          const yearKey = document.getElementById("dashboardFundingYearFilter").value;
+          const projectTypeKey = document.getElementById("dashboardProjectTypeFilter").value;
+          const agencyKey = document.getElementById("dashboardAgencyFilter").value;
+          const region = dashboardFilterData.regions[regionKey];
+          const year = dashboardFilterData.years[yearKey];
+          const projectType = dashboardFilterData.projectTypes[projectTypeKey];
+          const agency = dashboardFilterData.agencies[agencyKey];
+          const filterFactor = region.factor * year.factor * projectType.factor * agency.factor;
+          const needsFactor = filterFactor;
+          const gapFactor = region.factor * year.gapFactor * projectType.factor * agency.factor;
+
+          const filteredProjects = Math.max(1, Math.round(12381 * filterFactor));
+          const filteredFunds = 9.84 * filterFactor;
+          const filteredNeeds = Math.round(3214 * needsFactor);
+          const filteredGap = Math.round(812 * gapFactor);
+          const filterLabel = region.label + " · " + year.label + " · " + projectType.label + " · " + agency.label;
+
+          document.getElementById("kpiTotalProjects").textContent = filteredProjects.toLocaleString();
+          document.getElementById("kpiTotalFunds").textContent = dashboardPesoLabel(filteredFunds);
+          document.getElementById("kpiNeedsUpdates").textContent = filteredNeeds.toLocaleString();
+          document.getElementById("kpiUpdateGap").textContent = filteredGap.toLocaleString();
+
+          document.getElementById("kpiTotalProjectsNote").textContent = "Filtered portfolio count for " + filterLabel + ".";
+          document.getElementById("kpiTotalFundsNote").textContent = "Filtered estimated allocation for " + filterLabel + ".";
+          document.getElementById("kpiNeedsUpdatesNote").textContent = "Filtered records still needing engineer updates.";
+          document.getElementById("kpiUpdateGapNote").textContent = yearKey === "fy2026" || yearKey === "all" ? "Filtered FY 2026 month-end update gap." : "No FY 2026 gap for the selected funding year.";
+
+          renderKnowledgeDistribution();
+        }
+
+        function clearDashboardFilters() {
+          document.getElementById("dashboardRegionFilter").value = "all";
+          document.getElementById("dashboardFundingYearFilter").value = "all";
+          document.getElementById("dashboardProjectTypeFilter").value = "all";
+          document.getElementById("dashboardAgencyFilter").value = "all";
+          document.getElementById("knowledgeDistributionBy").value = "fundingYear";
+          document.getElementById("knowledgeUnitBy").value = "budget";
+          renderDashboardFilters();
+        }
+
+        document.getElementById("knowledgeDistributionBy").addEventListener("change", renderKnowledgeDistribution);
+        document.getElementById("knowledgeUnitBy").addEventListener("change", renderKnowledgeDistribution);
+        document.getElementById("dashboardRegionFilter").addEventListener("change", renderDashboardFilters);
+        document.getElementById("dashboardFundingYearFilter").addEventListener("change", renderDashboardFilters);
+        document.getElementById("dashboardProjectTypeFilter").addEventListener("change", renderDashboardFilters);
+        document.getElementById("dashboardAgencyFilter").addEventListener("change", renderDashboardFilters);
+        document.getElementById("clearDashboardFilters").addEventListener("click", clearDashboardFilters);
+
+        renderDashboardFilters();
+      </script>
+    </article>
+
+    <!-- Monitoring dashboard: progress reporting status -->
+    <article class="card wide">
+      <h2 class="section-title">Monitoring: Engineer Progress Reports by Region</h2>
+      <p class="subtext">
+        Left side represents projects still needing an updated status report.
+        Right side represents projects already updated by engineers.
+      </p>
+      <div class="bars">
+        <div class="split-row">
+          <span>Region IV-A</span>
+          <div class="left"><div class="fill" style="width:22%"></div></div>
+          <div class="axis"></div>
+          <div class="right"><div class="fill" style="width:78%"></div></div>
+          <b>78% updated</b>
+        </div>
+        <div class="split-row">
+          <span>Region III</span>
+          <div class="left"><div class="fill" style="width:28%"></div></div>
+          <div class="axis"></div>
+          <div class="right"><div class="fill" style="width:72%"></div></div>
+          <b>72% updated</b>
+        </div>
+        <div class="split-row">
+          <span>NCR</span>
+          <div class="left"><div class="fill" style="width:15%"></div></div>
+          <div class="axis"></div>
+          <div class="right"><div class="fill" style="width:85%"></div></div>
+          <b>85% updated</b>
+        </div>
+        <div class="split-row">
+          <span>Region VII</span>
+          <div class="left"><div class="fill" style="width:34%"></div></div>
+          <div class="axis"></div>
+          <div class="right"><div class="fill" style="width:66%"></div></div>
+          <b>66% updated</b>
+        </div>
+        <div class="split-row">
+          <span>BARMM</span>
+          <div class="left"><div class="fill" style="width:41%"></div></div>
+          <div class="axis"></div>
+          <div class="right"><div class="fill" style="width:59%"></div></div>
+          <b>59% updated</b>
+        </div>
+      </div>
+    </article>
+
+    <!-- Monitoring dashboard: reporting status composition -->
+    <article class="card">
+      <h2 class="section-title">Monitoring: Portfolio Reporting Status</h2>
+      <p class="subtext">
+        Donut slices show the share of project records by reporting status.
+      </p>
+
+      <div style="display:grid; grid-template-columns:minmax(220px,.85fr) minmax(280px,1.15fr); gap:18px; align-items:center; min-height:300px;">
+        <div style="width:250px; height:250px; border-radius:50%; margin:auto; display:grid; place-items:center; background:conic-gradient(#16a34a 0% 74.0%, #f59e0b 74.0% 93.0%, #dc2626 93.0% 100%); box-shadow:inset 0 0 0 48px white, 0 18px 36px rgba(8,49,95,.14);">
+          <div style="width:118px; height:118px; border-radius:999px; background:white; display:grid; place-items:center; text-align:center; color:#08315f; font-weight:950; box-shadow:0 0 0 1px #e0f2fe;">
+            12,381
+          </div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+          <tr>
+            <th style="padding:10px 8px; border-bottom:1px solid #dbeafe; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.12em; text-align:left;">Status</th>
+            <th style="padding:10px 8px; border-bottom:1px solid #dbeafe; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.12em; text-align:left;">Projects</th>
+            <th style="padding:10px 8px; border-bottom:1px solid #dbeafe; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.12em; text-align:left;">Share</th>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:950; color:#08315f;"><span style="display:inline-block; width:10px; height:10px; border-radius:999px; background:#16a34a; margin-right:7px;"></span>Updated</td>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:900;">9,167</td>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; color:#d97706; font-weight:950;">74.0%</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:950; color:#08315f;"><span style="display:inline-block; width:10px; height:10px; border-radius:999px; background:#f59e0b; margin-right:7px;"></span>Pending</td>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:900;">2,352</td>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; color:#d97706; font-weight:950;">19.0%</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:950; color:#08315f;"><span style="display:inline-block; width:10px; height:10px; border-radius:999px; background:#dc2626; margin-right:7px;"></span>Stale</td>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; font-weight:900;">862</td>
+            <td style="padding:10px 8px; border-bottom:1px solid #e2e8f0; color:#d97706; font-weight:950;">7.0%</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="subtext">
+        “Stale” means the project has an old report but no recent monthly update.
+      </p>
+    </article>
+
+    <!-- Monitoring dashboard: engineer update trend -->
+    <article class="card">
+      <div style="display:flex; justify-content:space-between; gap:14px; align-items:start; margin-bottom:10px;">
+        <div>
+          <h2 class="section-title">Monitoring: Engineer Update Trend</h2>
+          <p class="subtext">
+            Tracks how many project records engineers update over time.
+          </p>
+        </div>
+
+        <label style="display:grid; gap:6px; min-width:150px;">
+          <span style="color:#64748b; font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.13em;">Time span</span>
+          <select id="engineerUpdateRange" style="background:white; border:2px solid #bae6fd; border-radius:14px; padding:10px 12px; color:#08315f; font-weight:900;">
+            <option value="7">7 days</option>
+            <option value="15">15 days</option>
+            <option value="30">30 days</option>
+          </select>
+        </label>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:0 0 14px;">
+        <div style="background:#f8fafc; border:1px solid #dbeafe; border-radius:16px; padding:10px;">
+          <span class="label">Updated Projects</span>
+          <b id="engineerUpdatedTotal" style="display:block; color:#08315f; font-size:22px; margin-top:4px;">—</b>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #dbeafe; border-radius:16px; padding:10px;">
+          <span class="label">Average / Day</span>
+          <b id="engineerDailyAverage" style="display:block; color:#08315f; font-size:22px; margin-top:4px;">—</b>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #dbeafe; border-radius:16px; padding:10px;">
+          <span class="label">Peak Day</span>
+          <b id="engineerPeakDay" style="display:block; color:#08315f; font-size:22px; margin-top:4px;">—</b>
+        </div>
+      </div>
+
+      <div id="engineerLineChart" style="position:relative; height:260px; border-left:2px solid #dbeafe; border-bottom:2px solid #dbeafe; border-radius:0 0 0 14px; background:linear-gradient(to top,#f8fafc 1px,transparent 1px) 0 0/100% 25%; overflow:hidden;">
+        <!-- Smooth line chart renders here -->
+      </div>
+
+      <p class="subtext" id="engineerLineGuide" style="margin-top:12px;">
+        X-axis shows time. Y-axis shows the number of projects updated by engineers.
+      </p>
+
+      <script>
+        const engineerUpdateSeries = {
+          7: {
+            labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            values: [118, 142, 156, 184, 173, 129, 148]
+          },
+          15: {
+            labels: ["Day 1", "Day 3", "Day 5", "Day 7", "Day 9", "Day 11", "Day 13", "Day 15"],
+            values: [96, 121, 138, 164, 172, 198, 214, 231]
+          },
+          30: {
+            labels: ["Wk 1", "Day 10", "Day 15", "Day 20", "Day 25", "Day 30"],
+            values: [420, 660, 890, 1180, 1470, 1810]
+          }
+        };
+
+        function renderEngineerUpdateTrend(rangeKey) {
+          const data = engineerUpdateSeries[rangeKey];
+          const chart = document.getElementById("engineerLineChart");
+          const total = data.values.reduce((sum, value) => sum + value, 0);
+          const average = total / Number(rangeKey);
+          const peak = Math.max(...data.values);
+          const peakIndex = data.values.indexOf(peak);
+          const maxValue = Math.max(...data.values) * 1.12;
+          const width = 640;
+          const height = 220;
+          const leftPad = 42;
+          const rightPad = 24;
+          const topPad = 18;
+          const bottomPad = 42;
+          const plotWidth = width - leftPad - rightPad;
+          const plotHeight = height - topPad - bottomPad;
+
+          document.getElementById("engineerUpdatedTotal").textContent = total.toLocaleString();
+          document.getElementById("engineerDailyAverage").textContent = Math.round(average).toLocaleString();
+          document.getElementById("engineerPeakDay").textContent = data.labels[peakIndex] + " · " + peak.toLocaleString();
+          document.getElementById("engineerLineGuide").textContent = "In the selected " + rangeKey + "-day span, engineers updated " + total.toLocaleString() + " project records, averaging " + Math.round(average).toLocaleString() + " updates per day.";
+
+          chart.replaceChildren();
+
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+          svg.setAttribute("preserveAspectRatio", "none");
+          svg.setAttribute("style", "position:absolute; inset:0; width:100%; height:100%;");
+
+          const points = data.values.map((value, index) => {
+            const x = leftPad + (index / (data.values.length - 1)) * plotWidth;
+            const y = topPad + (1 - value / maxValue) * plotHeight;
+            return { x, y, value, label: data.labels[index] };
+          });
+
+          let path = "M " + points[0].x + " " + points[0].y;
+          for (let index = 1; index < points.length; index++) {
+            const prev = points[index - 1];
+            const current = points[index];
+            const midX = (prev.x + current.x) / 2;
+            path += " C " + midX + " " + prev.y + ", " + midX + " " + current.y + ", " + current.x + " " + current.y;
+          }
+
+          const areaPath = path + " L " + points[points.length - 1].x + " " + (height - bottomPad) + " L " + points[0].x + " " + (height - bottomPad) + " Z";
+
+          const area = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          area.setAttribute("d", areaPath);
+          area.setAttribute("fill", "rgba(2,132,199,.14)");
+          svg.appendChild(area);
+
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          line.setAttribute("d", path);
+          line.setAttribute("fill", "none");
+          line.setAttribute("stroke", "#075985");
+          line.setAttribute("stroke-width", "5");
+          line.setAttribute("stroke-linecap", "round");
+          line.setAttribute("stroke-linejoin", "round");
+          svg.appendChild(line);
+
+          points.forEach(point => {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", point.x);
+            circle.setAttribute("cy", point.y);
+            circle.setAttribute("r", "5");
+            circle.setAttribute("fill", "#f59e0b");
+            circle.setAttribute("stroke", "white");
+            circle.setAttribute("stroke-width", "3");
+            svg.appendChild(circle);
+          });
+
+          chart.appendChild(svg);
+
+          points.forEach(point => {
+            const xPct = (point.x / width) * 100;
+            const yPct = (point.y / height) * 100;
+
+            const valueLabel = document.createElement("div");
+            valueLabel.setAttribute("style", "position:absolute; left:" + xPct + "%; top:" + yPct + "%; transform:translate(-50%,-130%); color:#08315f; font-size:10px; font-weight:950; background:white; border:1px solid #dbeafe; border-radius:999px; padding:3px 6px; box-shadow:0 6px 14px rgba(8,49,95,.10);");
+            valueLabel.textContent = point.value.toLocaleString();
+            chart.appendChild(valueLabel);
+
+            const axisLabel = document.createElement("div");
+            axisLabel.setAttribute("style", "position:absolute; left:" + xPct + "%; bottom:8px; transform:translateX(-50%); color:#64748b; font-size:10px; font-weight:900;");
+            axisLabel.textContent = point.label;
+            chart.appendChild(axisLabel);
+          });
+
+          const yAxisLabel = document.createElement("div");
+          yAxisLabel.setAttribute("style", "position:absolute; left:8px; top:10px; color:#64748b; font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.08em;");
+          yAxisLabel.textContent = "Projects updated";
+          chart.appendChild(yAxisLabel);
+        }
+
+        document.getElementById("engineerUpdateRange").addEventListener("change", event => {
+          renderEngineerUpdateTrend(event.target.value);
+        });
+
+        renderEngineerUpdateTrend("7");
+      </script>
+    </article>
+
+    <!-- Strategic dashboard: 2026 goal assessment -->
+    <article class="card wide">
+      <h2 class="section-title">Strategic Goal: 100% of 2026 Projects Updated by End of Month</h2>
+      <p class="subtext">
+        This section focuses only on FY 2026 projects and tracks the remaining gap to full reporting compliance.
+      </p>
+      <div class="goal-cards">
+        <section class="goal">
+          <span class="label">2026 Projects Updated</span>
+          <h3>69% of 100%</h3>
+          <div class="bullet">
+            <div class="fill green" style="width:69%"></div>
+            <span class="target"></span>
+          </div>
+          <div class="goal-meta">
+            <span>Updated: 1,807</span>
+            <span>Remaining: 812</span>
+          </div>
+        </section>
+
+        <section class="goal">
+          <span class="label">Days Remaining</span>
+          <h3>14 days left</h3>
+          <div class="bullet">
+            <div class="fill gold" style="width:54%"></div>
+            <span class="target"></span>
+          </div>
+          <div class="goal-meta">
+            <span>Need: 58/day</span>
+            <span>Current: 41/day</span>
+          </div>
+        </section>
+
+        <section class="goal">
+          <span class="label">Goal Risk</span>
+          <h3>At Risk</h3>
+          <div class="bullet">
+            <div class="fill red" style="width:70%"></div>
+            <span class="target"></span>
+          </div>
+          <div class="goal-meta">
+            <span>Gap: 17/day</span>
+            <span>Escalate: 5 regions</span>
+          </div>
+        </section>
+      </div>
+    </article>
+
+    <!-- Strategic / operational project update tables -->
+    <article class="card">
+      <h2 class="section-title">Recently Updated Projects</h2>
+      <p class="subtext">
+        Heavier green cells indicate project records updated more recently.
+      </p>
+      <table>
+        <tr>
+          <th>Project</th>
+          <th>Engineer</th>
+          <th>Days Since Update</th>
+        </tr>
+        <tr>
+          <td>BARMM Classroom Completion Package 04</td>
+          <td>Engr. A. Santos</td>
+          <td style="background:#14532d; color:white; font-weight:950;"><b>0 days</b></td>
+        </tr>
+        <tr>
+          <td>Region VII School Building Repair 18</td>
+          <td>Engr. M. Reyes</td>
+          <td style="background:#166534; color:white; font-weight:950;"><b>0 days</b></td>
+        </tr>
+        <tr>
+          <td>NCR Multi-Purpose Learning Space</td>
+          <td>Engr. C. Dela Cruz</td>
+          <td style="background:#15803d; color:white; font-weight:950;"><b>1 day</b></td>
+        </tr>
+        <tr>
+          <td>Region III New Construction Batch 12</td>
+          <td>Engr. J. Lim</td>
+          <td style="background:#16a34a; color:white; font-weight:950;"><b>1 day</b></td>
+        </tr>
+        <tr>
+          <td>Region IV-A Site Development Works</td>
+          <td>Engr. P. Garcia</td>
+          <td style="background:#22c55e; color:#052e16; font-weight:950;"><b>2 days</b></td>
+        </tr>
+        <tr>
+          <td>CAR Two-Classroom Rehab Project</td>
+          <td>Engr. R. Mendoza</td>
+          <td style="background:#4ade80; color:#052e16; font-weight:950;"><b>2 days</b></td>
+        </tr>
+        <tr>
+          <td>Region X Water and Sanitation Upgrade</td>
+          <td>Engr. L. Navarro</td>
+          <td style="background:#86efac; color:#052e16; font-weight:950;"><b>3 days</b></td>
+        </tr>
+        <tr>
+          <td>Region XI Completion Works Package 07</td>
+          <td>Engr. D. Ramos</td>
+          <td style="background:#bbf7d0; color:#052e16; font-weight:950;"><b>3 days</b></td>
+        </tr>
+        <tr>
+          <td>Region V Repair of Damaged Classrooms</td>
+          <td>Engr. T. Aquino</td>
+          <td style="background:#dcfce7; color:#052e16; font-weight:950;"><b>4 days</b></td>
+        </tr>
+        <tr>
+          <td>Region II New Classroom Construction</td>
+          <td>Engr. B. Villanueva</td>
+          <td style="background:#f0fdf4; color:#052e16; font-weight:950;"><b>4 days</b></td>
+        </tr>
+      </table>
+    </article>
+
+    <article class="card">
+      <h2 class="section-title">Stale Project Updates</h2>
+      <p class="subtext">
+        Heavier red cells indicate more days have passed since the last engineer update.
+      </p>
+      <table>
+        <tr>
+          <th>Project</th>
+          <th>Engineer</th>
+          <th>Days Since Update</th>
+        </tr>
+        <tr>
+          <td>BARMM Secondary School Construction Lot 09</td>
+          <td>Engr. V. Abdullah</td>
+          <td style="background:#7f1d1d; color:white; font-weight:950;"><b>46 days</b></td>
+        </tr>
+        <tr>
+          <td>Region VII Coastal School Rehab Package</td>
+          <td>Engr. S. Mercado</td>
+          <td style="background:#991b1b; color:white; font-weight:950;"><b>41 days</b></td>
+        </tr>
+        <tr>
+          <td>Region III Flood-Resilient Classroom Build</td>
+          <td>Engr. E. Flores</td>
+          <td style="background:#b91c1c; color:white; font-weight:950;"><b>37 days</b></td>
+        </tr>
+        <tr>
+          <td>Region VIII Completion of Workshop Rooms</td>
+          <td>Engr. N. Castillo</td>
+          <td style="background:#dc2626; color:white; font-weight:950;"><b>33 days</b></td>
+        </tr>
+        <tr>
+          <td>CAR Mountain School Access Works</td>
+          <td>Engr. K. Bautista</td>
+          <td style="background:#ef4444; color:white; font-weight:950;"><b>29 days</b></td>
+        </tr>
+        <tr>
+          <td>Region XII Classroom Repair Cluster 03</td>
+          <td>Engr. H. Cruz</td>
+          <td style="background:#f87171; color:#450a0a; font-weight:950;"><b>25 days</b></td>
+        </tr>
+        <tr>
+          <td>Region I Site Drainage Improvement</td>
+          <td>Engr. O. Fernandez</td>
+          <td style="background:#fca5a5; color:#450a0a; font-weight:950;"><b>22 days</b></td>
+        </tr>
+        <tr>
+          <td>Region IX New Laboratory Building</td>
+          <td>Engr. G. Tan</td>
+          <td style="background:#fecaca; color:#450a0a; font-weight:950;"><b>19 days</b></td>
+        </tr>
+        <tr>
+          <td>Region VI Roof Replacement Package</td>
+          <td>Engr. I. Gonzales</td>
+          <td style="background:#fee2e2; color:#450a0a; font-weight:950;"><b>16 days</b></td>
+        </tr>
+        <tr>
+          <td>Region XIII Perimeter Fence Works</td>
+          <td>Engr. F. Manalo</td>
+          <td style="background:#fef2f2; color:#450a0a; font-weight:950;"><b>14 days</b></td>
+        </tr>
+      </table>
+    </article>
+
+    <article class="card note wide">
+      <h2 class="section-title">Interpretation</h2>
+      <p>
+        This hybrid design separates the dashboard into three clear layers.
+        The knowledge layer explains the national portfolio: 12,381 projects, ₱9.84B in funds, regional distribution, and funding-year distribution.
+        The monitoring layer tracks engineer progress reporting across regions, showing updated versus not-yet-updated projects.
+        The strategic layer focuses leadership attention on the urgent goal: all FY 2026 project records must be updated by month end.
+      </p>
+    </article>
+  </section>
+</div>
+</body>
+</html>
