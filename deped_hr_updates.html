@@ -289,7 +289,13 @@ let state={dataset:inferDatasetPage(),drill:[],drillChartMode:"stacked",shareMod
 let tableViewRows=[];
 const currentPage = state.dataset;
 
-const DATA_VERSION = (typeof window!=="undefined" && window.STRIDE_ASSETS && window.STRIDE_ASSETS.DATA_VERSION) ? String(window.STRIDE_ASSETS.DATA_VERSION) : "0";
+const DATA_VERSION =
+  (typeof window !== "undefined" &&
+   window.STRIDE_ASSETS &&
+   window.STRIDE_ASSETS.DATA_VERSION)
+    ? String(window.STRIDE_ASSETS.DATA_VERSION)
+    : "2026-07-16-v2";
+
 const RAW_CACHE_NAME = "stride-csv-preload-v2-" + DATA_VERSION;
 const PARSED_CACHE_NAME = "stride-parsed-v3-" + DATA_VERSION;
 function sharedCacheEnabled(){ return typeof caches !== "undefined" && location.protocol !== "file:"; }
