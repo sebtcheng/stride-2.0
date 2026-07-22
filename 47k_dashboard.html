@@ -512,7 +512,7 @@ h1,h2,h3,h4,.eyebrow,.kpi-number,.kpi-title,.button,.chart-toggle,.split-select,
 /* ============================ DATASET CONFIG ============================ */
 const CSV_FILE_NAME = "47k_buildable_space.csv";
 const CSV_FILE_CANDIDATES = [CSV_FILE_NAME,"./"+CSV_FILE_NAME,"data/"+CSV_FILE_NAME,"./data/"+CSV_FILE_NAME];
-const REQUIRED_FIELDS = ["region","division","school_id","school_name","province","legislative_district","municipality","barangay","type_of_ownership","ownership","buildable_space","dimension","scope_of_work"];
+const REQUIRED_FIELDS = ["region","division","school_id","school_name","province","legislative_district","municipality","barangay","entity_name","type_of_ownership","ownership","buildable_space","dimension","scope_of_work","total_classrooms","classroom_requirement","estimated_classroom_shortage"];
 
 /* Dummy data removed — the dashboard now loads live data from the 47k_buildable_space.csv file in the same folder. */
 
@@ -527,14 +527,20 @@ const ALT_LEVEL3 = {key:"alternateLevel3",label:"Legislative district"};
 /* Non-location categorical variables usable as Distribution / Split by. */
 const SEGMENT_VARS = [
   {key:"ownership",label:"Ownership"},
-  {key:"buildableBand",label:"Buildable space"}
+  {key:"buildableBand",label:"Buildable space"},
+  {key:"entityName",label:"Owning Entity"}
 ];
 const DEFAULT_SEGMENT = "ownership";
 /* Non-location filters intentionally limited to Ownership and Buildable space. */
 const CATEGORICAL_FILTERS = ["ownership","buildableBand"];
 /* Numeric fields -> one KPI + one Units option each. Primary is the default unit. */
-const NUMERIC_FIELDS = [{key:"buildableSpace",label:"Buildable space",unit:"m\u00B2",entityLabel:"Buildable space"}];
-const PRIMARY_METRIC = "buildableSpace";
+const NUMERIC_FIELDS = [
+  {key:"totalClassrooms",label:"Classroom inventory",unit:"classrooms",entityLabel:"Classroom inventory"},
+  {key:"classroomRequirement",label:"Classroom requirement",unit:"classrooms",entityLabel:"Classroom requirement"},
+  {key:"classroomShortage",label:"Classroom shortage",unit:"classrooms",entityLabel:"Classroom shortage"}
+];
+const NUMERIC_FIELDS_LEGACY = [{key:"buildableSpace",label:"Buildable space",unit:"m\u00B2",entityLabel:"Buildable space"}];
+const PRIMARY_METRIC = "totalClassrooms";
 const ENTITY = {singular:"School site",plural:"School sites",records:"sites"};
 const SEGMENT_PALETTE = ["#075985","#FBBF24","#16A34A","#7C3AED","#B91C1C","#0284C7","#D97706","#475569","#DB2777","#0891B2","#65A30D","#4338CA"];
 const UNASSIGNED = "\u2014"; // used only for display of blank hierarchy labels in table/modal, never in summaries
@@ -606,8 +612,9 @@ function parseCsv(text){
     return normalizeRow({
       region:get("region"),division:get("division"),school_id:get("school_id"),school_name:get("school_name"),
       province:get("province"),legislative_district:get("legislative_district"),municipality:get("municipality"),
-      barangay:get("barangay"),type_of_ownership:get("type_of_ownership"),ownership:get("ownership"),
-      buildable_space:get("buildable_space"),dimension:get("dimension"),scope_of_work:get("scope_of_work")
+      barangay:get("barangay"),entity_name:get("entity_name"),type_of_ownership:get("type_of_ownership"),ownership:get("ownership"),
+      buildable_space:get("buildable_space"),dimension:get("dimension"),scope_of_work:get("scope_of_work"),
+      total_classrooms:get("total_classrooms"),classroom_requirement:get("classroom_requirement"),estimated_classroom_shortage:get("estimated_classroom_shortage")
     });
   });
 }
@@ -656,12 +663,16 @@ function normalizeRow(r){
     alternateLevel3:blankToNull(r.legislative_district),
     level4:blankToNull(r.barangay),
     province:blankToNull(r.province),
+    entityName:blankToNull(r.entity_name),
     typeOfOwnership:blankToNull(r.type_of_ownership),
     ownership:blankToNull(r.ownership),
     dimension:blankToNull(r.dimension),
     scopeOfWork:scopeOfWork,
     buildableSpace:buildableSpace,
     buildableBand:buildableSpace,
+    totalClassrooms:number(r.total_classrooms),
+    classroomRequirement:number(r.classroom_requirement),
+    classroomShortage:number(r.estimated_classroom_shortage),
     hasSpace:hasSpace,hasScope:hasScope,status:status,issue:issue,
     forSurvey:(!hasSpace&&!hasScope)
   };
@@ -676,6 +687,8 @@ function segLabel(key){const v=SEGMENT_VARS.find(s=>s.key===key);return v?v.labe
 function dispLabel(v){return v==null||v===""?UNASSIGNED:v;}
 function isRecordUnit(){return unitMode==="records";}
 function unitSuffix(){if(isRecordUnit())return "";const nf=NUMERIC_FIELDS.find(n=>n.key===unitMode);return nf?(" "+nf.unit):"";}
+function activeNumericField(){return NUMERIC_FIELDS.find(n=>n.key===unitMode)||null;}
+function centerUnitLabel(){const nf=activeNumericField();return isRecordUnit()?ENTITY.records:(nf?nf.unit:"");}
 function rowMetric(r){return isRecordUnit()?1:(r[unitMode]||0);}
 function hexToRgb(hex){const c=hex.replace("#","");return{r:parseInt(c.slice(0,2),16),g:parseInt(c.slice(2,4),16),b:parseInt(c.slice(4,6),16)};}
 function rgbToHex(o){return "#"+[o.r,o.g,o.b].map(v=>Math.round(v).toString(16).padStart(2,"0")).join("");}
@@ -735,7 +748,7 @@ function baseFilteredRows(){
 
 /* ============================ CONTROLS ============================ */
 function populateStaticControls(){
-  const unitOpts=[`<option value="records">Number of ${ENTITY.records}</option>`];
+  const unitOpts=[`<option value="records">Number of ${ENTITY.records}</option>`,...NUMERIC_FIELDS.map(n=>`<option value="${n.key}">${escapeHtml(n.label)}</option>`)];
   unitModeSelect.innerHTML=unitOpts.join("");
   unitModeSelect.value=unitMode;
   distributionSelect.innerHTML=SEGMENT_VARS.map(v=>`<option value="${v.key}">${escapeHtml(v.label)}</option>`).join("");
@@ -790,12 +803,15 @@ function renderControls(){
 /* ============================ KPI ============================ */
 function renderKpis(rows){
   const cards=[];
-  cards.push({title:ENTITY.plural,value:fmt(rows.length),sub:"sites in current scope",color:null});
+  const grandTotal=isRecordUnit()?rows.length:rows.reduce((s,r)=>s+(r[unitMode]||0),0);
+  const grandTitle=isRecordUnit()?ENTITY.plural:(activeNumericField()?activeNumericField().label:"Total");
+  const grandSub=isRecordUnit()?"sites in current scope":((activeNumericField()?activeNumericField().label.toLowerCase():"total")+" in current scope");
+  cards.push({title:grandTitle,value:fmt(grandTotal),sub:grandSub,color:null});
   const varKey=distributionBy;const colors=segColorMap(varKey);const vals=visibleValues(varKey,rows);
   vals.forEach(v=>{
     const catRows=rows.filter(r=>r[varKey]===v);
-    const val=isRecordUnit()?catRows.length:catRows.reduce((s,r)=>s+r.buildableSpace,0);
-    cards.push({title:v,value:fmt(val)+(isRecordUnit()?"":" "+NUMERIC_FIELDS[0].unit),sub:isRecordUnit()?"sites":("buildable space \u00B7 "+segLabel(varKey).toLowerCase()),color:colors[v]});
+    const val=isRecordUnit()?catRows.length:catRows.reduce((s,r)=>s+(r[unitMode]||0),0);
+    cards.push({title:v,value:fmt(val),sub:isRecordUnit()?"sites":((activeNumericField()?activeNumericField().label.toLowerCase():"buildable space")+" \u00B7 "+segLabel(varKey).toLowerCase()),color:colors[v]});
   });
   kpiGrid.innerHTML=cards.map(c=>`
     <article class="card kpi-card"${c.color?` style="border-left-color:${c.color}"`:""}>
@@ -839,7 +855,7 @@ function renderBarLegend(varKey){
 }
 function renderBars(rows){
   const levelKey=currentLevelKey();const varKey=splitBy.bar;
-  barTitle.textContent=`${isRecordUnit()?ENTITY.plural:NUMERIC_FIELDS[0].label} by ${currentLevelLabel(levelKey)}`;
+  barTitle.textContent=`${isRecordUnit()?ENTITY.plural:(activeNumericField()?activeNumericField().label:"")} by ${currentLevelLabel(levelKey)}`;
   scopeTag.textContent=currentLevelLabel(levelKey)+" view";
   heatMapToggle.classList.toggle("active",drillChartMode!=="stacked");
   heatMapToggle.textContent=drillChartMode==="stacked"?"Stacked bars":"Heat map";
@@ -868,7 +884,7 @@ function renderBars(rows){
     if(!segHtml){const c="#94A3B8";segHtml=`<div class="segment" style="width:100%;background:${c};color:${textOn(c)}">${fmt(g.total)}</div>`;}
     row.setAttribute("oncontextmenu","return suppressBarContextMenu(event)");
     row.dataset.tooltip=JSON.stringify({title:g.name,rows:segTip,total:g.total,records:g.records});
-    row.innerHTML=`<span class="bar-label" title="${escapeHtml(g.name)}">${escapeHtml(g.name)}</span><div class="track" style="width:${trackWidth}%">${segHtml}</div><b class="bar-total">${fmt(g.total)}${isRecordUnit()?"":" "+NUMERIC_FIELDS[0].unit}</b>`;
+    row.innerHTML=`<span class="bar-label" title="${escapeHtml(g.name)}">${escapeHtml(g.name)}</span><div class="track" style="width:${trackWidth}%">${segHtml}</div><b class="bar-total">${fmt(g.total)}${unitSuffix()}</b>`;
     attachBarInteractions(row,levelKey,g.name);
     inventoryBars.appendChild(row);
   });
@@ -930,7 +946,7 @@ function suppressBarContextMenu(e){if(e&&e.preventDefault)e.preventDefault();if(
 function tooltipHtml(data){
   let h=`<h4>${escapeHtml(data.title)}</h4>`;
   (data.rows||[]).forEach(r=>{h+=`<div class="tt-row"><span class="dot" style="background:${r.color}"></span>${escapeHtml(r.name)}<b>${fmt(r.val)}</b></div>`;});
-  h+=`<div class="tt-row" style="border-top:1px solid #E2E8F0;margin-top:6px;padding-top:6px">Total<b>${fmt(data.total)}${isRecordUnit()?"":" "+NUMERIC_FIELDS[0].unit}</b></div>`;
+  h+=`<div class="tt-row" style="border-top:1px solid #E2E8F0;margin-top:6px;padding-top:6px">Total<b>${fmt(data.total)}${unitSuffix()}</b></div>`;
   return h;
 }
 function showBarTooltip(e,jsonStr){
@@ -967,7 +983,7 @@ document.addEventListener("contextmenu",e=>{if(e.target&&e.target.closest&&e.tar
 function renderConditionChart(rows){
   const varKey=splitBy.comp;compTitle.textContent=`Composition by ${segLabel(varKey)}`;
   const colors=segColorMap(varKey);const visible=visibleValues(varKey,rawRows);
-  const values=visible.map(v=>{const vr=rows.filter(r=>r[varKey]===v);return{label:v,value:isRecordUnit()?vr.length:vr.reduce((s,r)=>s+r.buildableSpace,0),color:colors[v]};}).filter(x=>x.value>0);
+  const values=visible.map(v=>{const vr=rows.filter(r=>r[varKey]===v);return{label:v,value:isRecordUnit()?vr.length:vr.reduce((s,r)=>s+(r[unitMode]||0),0),color:colors[v]};}).filter(x=>x.value>0);
   const total=Math.max(values.reduce((s,v)=>s+v.value,0),1);
   if(!values.length){conditionChartBody.className="";conditionChartBody.innerHTML=`<p class="card-subtitle">No ${escapeHtml(segLabel(varKey).toLowerCase())} values recorded in the current scope.</p>`;return;}
   if(conditionChartMode==="histogram"){
@@ -986,7 +1002,7 @@ function renderConditionChart(rows){
     return `<circle cx="21" cy="21" r="${radius}" fill="transparent" stroke="${v.color}" stroke-width="7" stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${offset}" data-tooltip="${escapeHtml(tooltip)}" onpointermove="showBarTooltip(event, this.getAttribute('data-tooltip'))" onpointerleave="hideBarTooltip()" style="cursor:pointer;transition:stroke-width 0.15s ease" onmouseover="this.setAttribute('stroke-width', '8')" onmouseout="this.setAttribute('stroke-width', '7')"></circle>`;
   }).join("");
   conditionChartBody.innerHTML=`
-    <div class="donut-stack"><div class="donut"><svg viewBox="0 0 42 42">${svgContent}</svg></div><div class="donut-center">${fmt(total)}<br>${isRecordUnit()?ENTITY.records:NUMERIC_FIELDS[0].unit}</div></div>
+    <div class="donut-stack"><div class="donut"><svg viewBox="0 0 42 42">${svgContent}</svg></div><div class="donut-center">${fmt(total)}<br>${centerUnitLabel()}</div></div>
     <div class="table-wrap"><table><thead><tr><th>${escapeHtml(segLabel(varKey))}</th><th>Value</th><th>Share</th></tr></thead><tbody>
     ${values.map(v=>`<tr><td><span class="dot" style="background:${v.color};margin-right:7px"></span>${escapeHtml(v.label)}</td><td><b>${fmt(v.value)}</b></td><td><b>${pct(v.value/total*100)}</b></td></tr>`).join("")}
     </tbody></table></div>`;
@@ -997,8 +1013,8 @@ function renderConditionChart(rows){
 function renderIssueChart(rows){
   const view=splitBy.issue;
   const colors=segColorMap(view);const visible=visibleValues(view,rawRows);
-  const items=visible.map(v=>{const vr=rows.filter(r=>r[view]===v);return{label:v,value:isRecordUnit()?vr.length:vr.reduce((s,r)=>s+r.buildableSpace,0),color:colors[v]};}).filter(x=>x.value>0);
-  const centerLabel=isRecordUnit()?ENTITY.records:NUMERIC_FIELDS[0].unit;
+  const items=visible.map(v=>{const vr=rows.filter(r=>r[view]===v);return{label:v,value:isRecordUnit()?vr.length:vr.reduce((s,r)=>s+(r[unitMode]||0),0),color:colors[v]};}).filter(x=>x.value>0);
+  const centerLabel=centerUnitLabel();
   const headerLabel=segLabel(view);
   const valueHeader="Value";
   issueTitle.textContent="Composition by "+segLabel(view);
