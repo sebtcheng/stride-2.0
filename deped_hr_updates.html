@@ -73,7 +73,7 @@ label{display:grid;gap:6px;min-width:0}label span{color:var(--muted);font-size:1
   // This dashboard only needs its two datasets warm for first paint. Resolve them
   // from the shared manifest (stride-assets.js) when present so paths/versioning
   // live in one place, and fall back to local literals otherwise.
-  var WANTED = ["all_deped_summary_april2026.csv", "enrolment_sy2025-2026.csv"];
+  var WANTED = ["all_deped_summary_gmis.csv", "enrolment_sy2025-2026.csv"];
   var manifest = (window.STRIDE_ASSETS && Array.isArray(window.STRIDE_ASSETS.csvUrls)) ? window.STRIDE_ASSETS.csvUrls : null;
   var CSVS_TO_PRELOAD = WANTED.map(function(name){
     var hit = manifest && manifest.filter(function(u){ return u.indexOf(name) !== -1; })[0];
@@ -276,7 +276,7 @@ label{display:grid;gap:6px;min-width:0}label span{color:var(--muted);font-size:1
 
 <script>
 const CSV_SOURCES = {
-  personnel:["./all_deped_summary_april2026.csv","./all_deped_summary_april2026.csv","data/all_deped_summary_april2026.csv","./data/all_deped_summary_april2026.csv"],
+  personnel:["./all_deped_summary_gmis.csv","./all_deped_summary_gmis.csv","data/all_deped_summary_gmis.csv","./data/all_deped_summary_gmis.csv"],
   enrolment:["./enrolment_sy2025-2026.csv","./enrolment_sy2025-2026.csv","data/enrolment_sy2025-2026.csv","./data/enrolment_sy2025-2026.csv"]
 };
 
@@ -289,13 +289,7 @@ let state={dataset:inferDatasetPage(),drill:[],drillChartMode:"stacked",shareMod
 let tableViewRows=[];
 const currentPage = state.dataset;
 
-const DATA_VERSION =
-  (typeof window !== "undefined" &&
-   window.STRIDE_ASSETS &&
-   window.STRIDE_ASSETS.DATA_VERSION)
-    ? String(window.STRIDE_ASSETS.DATA_VERSION)
-    : "2026-07-25-v2";
-
+const DATA_VERSION = (typeof window!=="undefined" && window.STRIDE_ASSETS && window.STRIDE_ASSETS.DATA_VERSION) ? String(window.STRIDE_ASSETS.DATA_VERSION) : String(Date.now());
 const RAW_CACHE_NAME = "stride-csv-preload-v2-" + DATA_VERSION;
 const PARSED_CACHE_NAME = "stride-parsed-v3-" + DATA_VERSION;
 function sharedCacheEnabled(){ return typeof caches !== "undefined" && location.protocol !== "file:"; }
@@ -429,7 +423,8 @@ async function fetchFirstAvailableCsv(datasetKey){
   const errors=[];
   for(const url of CSV_SOURCES[datasetKey]){
     try{
-      const response=await fetch(url,{cache:"no-store"});
+      const fetchUrl = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+      const response=await fetch(fetchUrl,{cache:"no-store"});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       return{url,text:decodeCsvText(await response.arrayBuffer())};
     }catch(error){errors.push(`${url}: ${error.message||error}`)}
