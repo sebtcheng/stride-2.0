@@ -46,7 +46,7 @@ body{margin:0;min-height:100vh;color:var(--text);font-family:var(--font-body);ba
 .card-inner{padding:16px}.card-header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px}.card h2{margin:0;color:var(--navy);font-family:var(--font-heading);font-size:20px;font-weight:800;letter-spacing:-.02em}.card-subtitle{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.35}
 .subcard{padding:16px;border:1.5px solid var(--line);border-radius:16px;background:var(--blue-50);margin-bottom:10px}.subcard.adv{border-color:var(--gold);background:#FFFBEB}.subcard-head{margin:0 0 12px;color:var(--navy);font-size:14px;font-weight:800;font-family:var(--font-heading)}
 .button{height:42px;border:0;border-radius:14px;background:var(--blue);color:white;padding:10px 12px;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.1;font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer}.button:hover{background:var(--navy)}.button.secondary{background:var(--blue-100);color:var(--navy)}.button.secondary.active{background:var(--gold);color:var(--navy);box-shadow:inset 0 -3px 0 rgba(8,49,95,.16)}.button.outline{background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none}.button.outline:hover{background:var(--blue-50);border-color:var(--blue-400)}.button:disabled{opacity:.45;cursor:not-allowed}.chart-toggle{position:relative;width:auto!important;height:32px!important;padding:7px 14px!important;border:1.5px solid #DBEAFE!important;border-radius:999px!important;background:#F8FAFC!important;color:var(--blue)!important;font-size:11px!important;font-weight:800}
-.controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end}
+.controls{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end}
 label{display:grid;gap:6px;min-width:0}label span{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.select,.search{width:100%;height:42px;border:2px solid var(--line);border-radius:14px;background:white;color:var(--navy);padding:10px 12px;font-family:var(--font);font-size:12px;font-weight:700;outline:none}
 .kpi-grid{display:flex;flex-wrap:wrap;gap:8px}
 .kpi-card{position:relative;overflow:hidden;border-left-width:6px;flex:1 1 calc((100% - (var(--kpi-per-row,4) - 1)*8px)/var(--kpi-per-row,4));min-width:150px}.kpi-card .card-inner{padding:12px 13px}.kpi-card::after{content:"";position:absolute;right:-28px;bottom:-34px;width:94px;height:94px;border-radius:999px;background:color-mix(in srgb,var(--blue-100) 72%,transparent);pointer-events:none}.kpi-title{margin:0 0 8px;color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.12em;line-height:1.1;text-transform:uppercase;position:relative;z-index:1}
@@ -64,6 +64,18 @@ label{display:grid;gap:6px;min-width:0}label span{color:var(--muted);font-size:1
 @media(max-width:1180px){.kpi-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.grid{grid-template-columns:1fr}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1000px){body{padding-bottom:82px}.app{grid-template-columns:1fr}.sidebar{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:80;width:auto;padding:8px 10px;display:block;border:0;border-top:1px solid rgba(255,255,255,.46);background:linear-gradient(90deg,color-mix(in srgb,var(--blue) 80%,var(--navy) 20%),var(--blue-600))}.sidebar:hover{width:auto;padding:8px 10px}.brand{display:none}.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:min(760px,100%);margin:0 auto}.nav a,.sidebar:hover .nav a{display:grid;place-items:center;gap:2px;min-height:48px;padding:6px 2px;border-radius:16px;font-size:8px;line-height:1;text-align:center}.nav-icon{width:auto;min-width:0;font-size:14px}.topbar{min-height:104px;margin:15px 16px 0;padding:15px 23px}.content{width:calc(100% - 32px)}.bar-row{grid-template-columns:110px minmax(0,1fr) 58px;gap:7px}}
 @media(max-width:680px){.topbar{display:grid}.topbar::before{width:100%;clip-path:none}.topbar::after{display:none}.page-title{max-width:100%}.status-pill{width:100%;text-align:left}.header-search{width:100%;margin-left:0}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.donut-layout,.detail-grid,.bar-row{grid-template-columns:1fr}}
+.year-filter-wrap{position:relative;min-width:0}
+.year-filter-btn{width:100%;height:42px;border:2px solid var(--line);border-radius:14px;background:white;color:var(--navy);padding:10px 12px;font-size:12px;font-weight:700;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;outline:none;font-family:var(--font-body)}
+.year-filter-btn:hover{border-color:var(--blue-400);background:var(--blue-50)}
+.year-filter-btn .yfb-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.year-filter-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;max-height:260px;overflow-y:auto;z-index:200;background:white;border:2px solid var(--blue);border-radius:14px;padding:8px;box-shadow:0 12px 32px rgba(8,49,95,.20);display:none}
+.year-filter-dropdown.open{display:block}
+.year-filter-actions{display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.year-filter-actions button{flex:1;height:28px;border:0;border-radius:10px;background:var(--blue-100);color:var(--navy);font-size:10px;font-weight:800;cursor:pointer;padding:0;font-family:var(--font-body)}
+.year-filter-actions button:hover{background:var(--blue);color:white}
+.year-cb-item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--navy);user-select:none}
+.year-cb-item:hover{background:var(--blue-50)}
+.year-cb-item input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--blue);flex:0 0 auto}
 </style>
 </head>
 <body data-current-page="personnel">
@@ -281,11 +293,11 @@ const CSV_SOURCES = {
 };
 
 const DATASETS = {
-  personnel:{label:"Personnel",heroTitle:"DepEd Personnel <span>Monitoring Dashboard</span>",recordLabel:"Personnel Records",recordSub:"personnel records in view",numericLabels:{number:"Total Personnel"},fields:"region · division · position · classification · status · number",rows:[],required:["region","division","position","classification","status","number"],valueKey:"number",filterKeys:["region","division","position","status"],filterLabels:["Region","Division","Position","Status"],hierarchy:["region","division","position","classification"],distributionKeys:["position","classification","status"],compositionKey:"status",issueKey:"classification",columns:["region","division","position","classification","status","number"],aliases:{number:["headcount","count","total","qty","quantity"]}},
+  personnel:{label:"Personnel",heroTitle:"DepEd Personnel <span>Monitoring Dashboard</span>",recordLabel:"Personnel Records",recordSub:"personnel records in view",numericLabels:{number:"Total Personnel"},fields:"region · division · position · classification · status · number",rows:[],required:["region","division","position","classification","status","year_created","number"],valueKey:"number",filterKeys:["region","division","position","status"],filterLabels:["Region","Division","Position","Status"],hierarchy:["region","division","position","classification"],distributionKeys:["position","classification","status"],compositionKey:"status",issueKey:"classification",columns:["region","division","position","classification","status","year_created","number"],aliases:{number:["headcount","count","total","qty","quantity"]}},
   enrolment:{label:"Enrolment SY 2025–2026",heroTitle:"Enrolment <span>Monitoring Dashboard</span>",recordLabel:"Enrolment Records",recordSub:"enrolment records in view",numericLabels:{inventory:"Total Learners"},fields:"region · province · division · district · barangay · grade · gender · track · inventory",rows:[],required:["region","province","division","legislative_district","barangay","grade_level","gender","track","inventory"],valueKey:"inventory",filterKeys:["region","division","grade_level","track"],filterLabels:["Region","Division","Grade Level","Track"],hierarchy:["region","province","division","legislative_district","barangay"],distributionKeys:["grade_level","gender","track"],compositionKey:"grade_level",issueKey:"gender",columns:["region","province","division","legislative_district","barangay","grade_level","gender","track","inventory"],aliases:{legislative_district:["district"],grade_level:["grade","gradelevel"],inventory:["learners","learner_count","enrolment","enrollment","total"]}}
 };
 
-let state={dataset:inferDatasetPage(),drill:[],drillChartMode:"stacked",shareMode:"donut",issueMode:"histogram",page:1,pageSize:10,sortKey:null,sortDir:"asc",distKey:null,barDistKey:null,shareDistKey:null,issueDistKey:null,unitKey:null,advOpen:false,tableFilters:{},activeTableFilter:null,segFilters:{},filters:{},itemStatusFilter:"all",heatSortKey:null,heatSortDir:"desc"};
+let state={dataset:inferDatasetPage(),drill:[],drillChartMode:"stacked",shareMode:"donut",issueMode:"histogram",page:1,pageSize:10,sortKey:null,sortDir:"asc",distKey:null,barDistKey:null,shareDistKey:null,issueDistKey:null,unitKey:null,advOpen:false,tableFilters:{},activeTableFilter:null,segFilters:{},filters:{},itemStatusFilter:"all",heatSortKey:null,heatSortDir:"desc",yearFilter:[]};
 let tableViewRows=[];
 const currentPage = state.dataset;
 
@@ -337,7 +349,7 @@ function groupKeys(){const c=cfg();const nk=numericKeys();return c.columns.filte
 function tableColumns(){const c=cfg();const cols=c.columns.slice();if(state.dataset==="personnel"&&!cols.includes("item_status")){const at=cols.indexOf("number");cols.splice(at>=0?at:cols.length,0,"item_status")}return cols}
 function distributionKeys(){const c=cfg();return (c.distributionKeys||groupKeys()).filter(k=>groupKeys().includes(k))}
 function isLocationKey(k){return ["region","province","division","legislative_district","district","municipality","city","barangay","site","school_district","purok","sitio"].includes(k)}
-function activeFilterKeys(){const cats=groupKeys();const base=["region","division"].filter(k=>cats.includes(k));let attrs=cats.filter(k=>!isLocationKey(k)&&!base.includes(k));if(attrs.includes("classification")&&attrs.includes("position"))attrs=["classification","position",...attrs.filter(k=>k!=="classification"&&k!=="position")];return [...base,...attrs]}
+function activeFilterKeys(){const cats=groupKeys();const base=["region","division"].filter(k=>cats.includes(k));let attrs=cats.filter(k=>!isLocationKey(k)&&!base.includes(k));if(attrs.includes("classification")&&attrs.includes("position"))attrs=["classification","position",...attrs.filter(k=>k!=="classification"&&k!=="position")];if(attrs.includes("year_created")&&attrs.includes("status")){const withoutYear=attrs.filter(k=>k!=="year_created");const statusIdx=withoutYear.indexOf("status");attrs=[...withoutYear.slice(0,statusIdx),"year_created",...withoutYear.slice(statusIdx)]}return [...base,...attrs]}
 function allowedCats(segKey,list){const all=summarize(list,segKey).map(x=>x.label);const sel=state.segFilters&&state.segFilters[segKey];if(sel&&sel.length)return all.filter(l=>sel.includes(l));if(all.length>5)return all.slice(0,5);return all}
 function safe(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function esc(s){return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
@@ -539,6 +551,7 @@ function currentRows(){
       const fv=state.filters[k]||"all";if(fv!=="all"&&value(r,k)!==fv) return false;
     }
     if(state.itemStatusFilter&&state.itemStatusFilter!=="all"&&value(r,"item_status")!==state.itemStatusFilter) return false;
+    if(state.yearFilter&&state.yearFilter.length&&!state.yearFilter.includes(value(r,"year_created"))) return false;
     for(let i=0;i<state.drill.length;i++) if(value(r,c.hierarchy[i])!==state.drill[i]) return false;
     if(q&&!Object.values(r).join(" ").toLowerCase().includes(q)) return false;
     return true;
@@ -599,6 +612,7 @@ function renderFilters(){
       }
     }
     if(key==="position"&&state.filters.classification&&state.filters.classification!=="all")source=source.filter(r=>value(r,"classification")===state.filters.classification);
+    if(key==="year_created"){const yearOpts=Array.from(new Set(rows().map(r=>value(r,"year_created")))).filter(Boolean).sort((a,b)=>Number(b)-Number(a));const allSel=!state.yearFilter||!state.yearFilter.length;const btnTxt=allSel?"All Years":state.yearFilter.length===1?state.yearFilter[0]:`${state.yearFilter.length} years selected`;return `<label><span>Year Created</span><div class="year-filter-wrap" id="yearFilterWrap"><button class="year-filter-btn" type="button" onclick="toggleYearDropdown(event)"><span class="yfb-text">${safe(btnTxt)}</span><span style="font-size:10px">▾</span></button><div class="year-filter-dropdown" id="yearDropdown"><div class="year-filter-actions"><button type="button" onclick="yearSelectAll(event)">All</button><button type="button" onclick="yearClearAll(event)">None</button><button type="button" onclick="applyYearFilter()">Apply ✓</button></div>${yearOpts.map(y=>`<label class="year-cb-item"><input type="checkbox" value="${safe(y)}" ${(allSel||state.yearFilter.includes(y))?"checked":""}><span>${safe(y)}</span></label>`).join("")}</div></div></label>`;}
     const opts=["all",...Array.from(new Set(source.map(r=>value(r,key)))).filter(Boolean).sort()];
     const cur=state.filters[key]||"all";
     const val=opts.includes(cur)?cur:"all";
@@ -722,11 +736,11 @@ function renderDonut(el,items,total){
     const p=total?i.value/total*100:0;
     const offset = 100 - start;
     start+=p;
-    const tooltip = `<div class="bar-tt-title">${safe(i.label)}</div><div class="bar-tt-row"><span class="dot" style="background:${i.color}"></span><span class="tt-label">Value</span><span class="tt-val">${fmt(i.value)}</span></div><div class="bar-tt-row"><span class="tt-label">Share</span><span class="tt-val">${total?Math.round(i.value/total*100):0}%</span></div>`;
+    const tooltip = `<div class="bar-tt-title">${safe(i.label)}</div><div class="bar-tt-row"><span class="dot" style="background:${i.color}"></span><span class="tt-label">Value</span><span class="tt-val">${fmt(i.value)}</span></div><div class="bar-tt-row"><span class="tt-label">Share</span><span class="tt-val">${total?(i.value/total*100).toFixed(2):"0.00"}%</span></div>`;
     return `<circle cx="21" cy="21" r="${radius}" fill="transparent" stroke="${i.color}" stroke-width="7" stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${offset}" data-tooltip="${safe(tooltip)}" onpointermove="showBarTooltip(event, this.getAttribute('data-tooltip'))" onpointerleave="hideBarTooltip()" style="cursor:pointer;transition:stroke-width 0.15s ease" onmouseover="this.setAttribute('stroke-width', '8')" onmouseout="this.setAttribute('stroke-width', '7')"></circle>`;
   }).join("");
   el.className="donut-layout";
-  el.innerHTML=`<div class="donut"><svg viewBox="0 0 42 42">${svgContent}</svg><div class="donut-center">${fmt(total)}<br>total</div></div><div class="table-wrap"><table><thead><tr><th>Segment</th><th>Value</th><th>Share</th></tr></thead><tbody>${items.map(i=>`<tr><td><span class="dot" style="background:${i.color};margin-right:7px"></span>${safe(i.label)}</td><td><b>${fmt(i.value)}</b></td><td><b>${total?Math.round(i.value/total*100):0}%</b></td></tr>`).join("")}</tbody></table></div>`;
+  el.innerHTML=`<div class="donut"><svg viewBox="0 0 42 42">${svgContent}</svg><div class="donut-center">${fmt(total)}<br>total</div></div><div class="table-wrap"><table><thead><tr><th>Segment</th><th>Value</th><th>Share</th></tr></thead><tbody>${items.map(i=>`<tr><td><span class="dot" style="background:${i.color};margin-right:7px"></span>${safe(i.label)}</td><td><b>${fmt(i.value)}</b></td><td><b>${total?(i.value/total*100).toFixed(2):"0.00"}%</b></td></tr>`).join("")}</tbody></table></div>`;
 }
 function renderHist(el,items){
   const max=Math.max(...items.map(i=>i.value),1);
@@ -766,10 +780,12 @@ function badge(k,v){
 function tableColumnValue(row,key){return row[key]??""}
 function applyTableColumnFilters(list){
   const filters=state.tableFilters||{};
+  const nk=numericKeys();
   return list.filter(r=>Object.entries(filters).every(([key,raw])=>{
-    const filter=String(raw||"").trim().toLowerCase();
-    if(!filter) return true;
-    return String(tableColumnValue(r,key)).toLowerCase().includes(filter);
+    const raw2=String(raw||"").trim();
+    if(!raw2) return true;
+    const cell=String(tableColumnValue(r,key));
+    return nk.includes(key)?cell.toLowerCase().includes(raw2.toLowerCase()):cell===raw2;
   }));
 }
 function sortTableRows(list){
@@ -782,6 +798,7 @@ function sortTableRows(list){
   return sorted;
 }
 function setColumnFilter(k,v){state.tableFilters[k]=v;state.activeTableFilter=k;state.page=1;renderAll()}
+function renderTableFilterRow(cols){const nk=numericKeys();return cols.map(k=>{if(nk.includes(k))return `<th><input class="column-filter" type="search" data-column-filter="${k}" value="${safe(state.tableFilters[k]||'')}" placeholder="Filter" oninput="setColumnFilter('${k}',this.value)"></th>`;const dv=Array.from(new Set(rows().map(r=>String(r[k]??'').trim()))).filter(Boolean).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));const cv=state.tableFilters[k]||'';return `<th><select class="column-filter" data-column-filter="${k}" onchange="setColumnFilter('${k}',this.value)"><option value="">All</option>${dv.map(v=>`<option value="${safe(v)}" ${v===cv?'selected':''}>${safe(v)}</option>`).join('')}</select></th>`;}).join('')}
 function renderTable(list){
   const c=cfg(), cols=tableColumns();
   const sorted=sortTableRows(applyTableColumnFilters(list));
@@ -789,12 +806,12 @@ function renderTable(list){
   const pages=Math.max(1,Math.ceil(sorted.length/state.pageSize));
   state.page=Math.min(state.page,pages);
   const start=(state.page-1)*state.pageSize, page=sorted.slice(start,start+state.pageSize);
-  thead.innerHTML=`<tr>${cols.map(k=>{const isNum=numericKeys().includes(k);return `<th style="${isNum?'text-align:center':''}"><button class="sort-button ${state.sortKey===k?"active":""}" style="${isNum?'justify-content:center':''}" onclick="sortBy('${k}')">${safe(k.replaceAll("_"," "))}<span class="sort-icon">${state.sortKey===k?(state.sortDir==="asc"?"▲":"▼"):"↕"}</span></button></th>`}).join("")}</tr><tr>${cols.map(k=>`<th><input class="column-filter" type="search" data-column-filter="${k}" value="${safe(state.tableFilters[k]||"")}" placeholder="Filter" oninput="setColumnFilter('${k}',this.value)"></th>`).join("")}</tr>`;
+  thead.innerHTML=`<tr>${cols.map(k=>{const isNum=numericKeys().includes(k);return `<th style="${isNum?'text-align:center':''}"><button class="sort-button ${state.sortKey===k?"active":""}" style="${isNum?'justify-content:center':''}" onclick="sortBy('${k}')">${safe(k.replaceAll("_"," "))}<span class="sort-icon">${state.sortKey===k?(state.sortDir==="asc"?"▲":"▼"):"↕"}</span></button></th>`}).join("")}</tr><tr>${renderTableFilterRow(cols)}</tr>`;
   tbody.innerHTML=page.map((r,i)=>`<tr class="record-row" onclick="openModalFromTable(${start+i})">${cols.map(k=>{const isNum=numericKeys().includes(k);return `<td style="${isNum?'text-align:center':''}">${badge(k,r[k])}</td>`}).join("")}</tr>`).join("");
   renderTableControls(sorted.length,pages,start,page.length);
   if(state.activeTableFilter){
     const active=thead.querySelector(`[data-column-filter="${state.activeTableFilter}"]`);
-    if(active){active.focus();const len=active.value.length;active.setSelectionRange(len,len)}
+    if(active){active.focus();if(active.tagName==="INPUT"){const len=active.value.length;active.setSelectionRange(len,len)}}
   }
 }
 function renderTableControls(totalRows,totalPages,start,count){
@@ -985,11 +1002,17 @@ catFilterBtn.onclick=openCatModal;
 catSearch.addEventListener("input",()=>{syncCatModalChecked();clearTimeout(catModalTimer);catModalTimer=setTimeout(()=>{catModalQuery=catSearch.value.trim();renderCatModalList()},180)});
 catModalBackdrop.onclick=e=>{if(e.target===catModalBackdrop) closeCatModal()};
 unitSelect.onchange=()=>{state.unitKey=unitSelect.value||null;state.page=1;renderAll()};
-resetBtn.onclick=()=>{state.drill=[];state.page=1;state.sortKey=null;state.tableFilters={};state.activeTableFilter=null;state.distKey=null;state.barDistKey=null;state.shareDistKey=null;state.issueDistKey=null;state.unitKey=null;state.advOpen=false;state.segFilters={};state.filters={};state.itemStatusFilter="all";globalSearch.value="";renderAll()};
+resetBtn.onclick=()=>{state.drill=[];state.page=1;state.sortKey=null;state.tableFilters={};state.activeTableFilter=null;state.distKey=null;state.barDistKey=null;state.shareDistKey=null;state.issueDistKey=null;state.unitKey=null;state.advOpen=false;state.segFilters={};state.filters={};state.itemStatusFilter="all";state.yearFilter=[];globalSearch.value="";renderAll()};
 heatToggle.onclick=()=>{state.drillChartMode=state.drillChartMode==="stacked"?"heatmap":"stacked";renderBars(currentRows())};
 shareToggle.onclick=()=>{state.shareMode=state.shareMode==="donut"?"histogram":"donut";renderShareChart(currentRows())};
 issueToggle.onclick=()=>{state.issueMode=state.issueMode==="histogram"?"donut":"histogram";renderIssueChart(currentRows())};
 modalBackdrop.onclick=e=>{if(e.target===modalBackdrop) closeModal()};
+function toggleYearDropdown(e){e.stopPropagation();const dd=document.getElementById("yearDropdown");if(dd)dd.classList.toggle("open")}
+function collectYearSelections(){const dd=document.getElementById("yearDropdown");if(!dd)return;const checked=Array.from(dd.querySelectorAll("input[type=checkbox]:checked")).map(i=>i.value);const total=dd.querySelectorAll("input[type=checkbox]").length;state.yearFilter=checked.length===total?[]:checked}
+function applyYearFilter(){collectYearSelections();document.getElementById("yearDropdown")?.classList.remove("open");state.page=1;renderAll()}
+function yearSelectAll(e){if(e)e.stopPropagation();const dd=document.getElementById("yearDropdown");if(dd)dd.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked=true);const btn=document.querySelector("#yearFilterWrap .yfb-text");if(btn)btn.textContent="All Years"}
+function yearClearAll(e){if(e)e.stopPropagation();const dd=document.getElementById("yearDropdown");if(dd)dd.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked=false);const btn=document.querySelector("#yearFilterWrap .yfb-text");if(btn)btn.textContent="0 years selected"}
+document.addEventListener("click",function(e){if(!e.target.closest("#yearFilterWrap")){const dd=document.getElementById("yearDropdown");if(dd&&dd.classList.contains("open")){collectYearSelections();dd.classList.remove("open");state.page=1;renderAll()}}});
 loadCsvData();
 </script>
 </body>
